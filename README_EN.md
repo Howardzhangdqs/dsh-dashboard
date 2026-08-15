@@ -4,6 +4,8 @@ A workbench plugin for the [DeepSeek Harness](https://github.com/deepseek-ai/Dee
 
 **Capabilities**: file management, editing with multi-format preview, embedded browser, real terminal, Git panel, background-task view, and a `ctx.dashboard` service through which third-party plugins register extension pages and file viewers.
 
+Derived from [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) (forked at v0.10.3) and evolved independently since; the upstream integration docs continue in this repo's [AGENTS.md](./AGENTS.md).
+
 <div align="center">
 
 <a href="./README.md">中文</a> · English
@@ -50,101 +52,59 @@ See the releases page for a demo video and screenshots.
 - **Declarative settings**: the settings page renders a registry-driven feature inventory (each item toggleable); feature-level secondary settings edit in a native dialog.
 - **i18n**: UI copy follows the DSH language setting (zh/en); the host preference takes priority over the browser language and switches live.
 
-## Installation
+## Installation (from source)
 
-Prerequisites: DSH installed (`dsh web` boots), Node.js ≥ 20, pnpm ≥ 10.
-
-**macOS / Linux** (Git Bash / WSL also work on Windows):
+Built and installed from source. Prerequisites: DSH installed (`dsh web` boots), Node.js ≥ 20, pnpm ≥ 10.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.sh | bash
-```
+# 1. Clone and build
+git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboard
+cd ~/Code/dsh-dashboard && pnpm install && pnpm build
 
-**Windows (PowerShell 5.1+ / pwsh)**:
+# 2. Allow node-pty / protobufjs build scripts (pnpm 11 blocks them by default; skip on pnpm 10)
+cd ~/.dsh/profiles/web && pnpm approve-builds --all
 
-```powershell
-irm https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.ps1 | iex
+# 3. Point the dependency at the local clone (package.json dependencies)
+#    "dsh-dashboard": "link:/home/you/Code/dsh-dashboard"
+
+# 4. Append the mount line (cordis.patch.yml)
+#    - insert:
+#        - id: dashboard
+#          name: 'dsh-dashboard'
+
+# 5. Install and restart
+pnpm install
 ```
 
 Restart DSH and hard-refresh (Cmd/Ctrl+Shift+R) afterwards.
 
-<details>
-<summary>Pin a version / auto-restart</summary>
-
-```sh
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.sh | bash -s 0.10.4 --restart
-
-# Windows PowerShell
-& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.ps1'))) -Version 0.10.4 -Restart
-```
-
-Add `--dry-run` (`-DryRun` in PowerShell) to preview the steps first.
-
-</details>
+Update: `git pull && pnpm install && pnpm build`, then restart DSH (client-only changes need only a hard-refresh).
 
 <details>
-<summary>Manual install (step by step)</summary>
-
-Equivalent to the one-click script. **Step ③ repeats safely; ①② run once.**
-
-**macOS / Linux (bash)**:
-
-```sh
-cd ~/.dsh/profiles/web
-
-# ① Allow node-pty / protobufjs build scripts (pnpm 11 blocks them by default; skip on pnpm 10)
-pnpm approve-builds --all
-
-# ② Allow versions published less than 24h ago (skip for older releases; merge the line under the key if it exists)
-cat >> pnpm-workspace.yaml <<'EOF'
-minimumReleaseAgeExclude:
-  - dsh-dashboard
-EOF
-
-# ③ Install and auto-mount (no @version = npm latest; pin with dsh-dashboard@0.10.4)
-npx -y --package @deepseek-ai/dsh dsh plugin --profile web add dsh-dashboard
-```
-
-**Windows (PowerShell)**:
+<summary>Windows (PowerShell) equivalent</summary>
 
 ```powershell
+git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboard
+cd ~/Code/dsh-dashboard; pnpm install; pnpm build
+
 cd ~\.dsh\profiles\web
-
-# ① Allow build scripts
 pnpm approve-builds --all
-
-# ② Allow fresh releases (once; merge - dsh-dashboard under the key if it exists)
-Add-Content -Path pnpm-workspace.yaml -Value "`nminimumReleaseAgeExclude:`n  - dsh-dashboard"
-
-# ③ Install and auto-mount
-npx -y --package @deepseek-ai/dsh dsh plugin --profile web add dsh-dashboard
+# package.json dependencies: "dsh-dashboard": "link:<absolute path of the clone>"
+# cordis.patch.yml append:
+#   - insert:
+#       - id: dashboard
+#         name: 'dsh-dashboard'
+pnpm install
 ```
+
+Quote the link: value if the path contains spaces. Restart DSH, then hard-refresh.
 
 </details>
 
 <details>
-<summary>What the one-click script does</summary>
+<summary>npm channel (upstream published the old name; this repo is not on npm)</summary>
 
-Four things, all idempotent:
-
-1. Pre-writes `allowBuilds` (node-pty / protobufjs) to bypass pnpm 11's build-script block;
-2. Pre-writes `minimumReleaseAgeExclude` for releases younger than 24 hours;
-3. Runs `dsh plugin --profile web add dsh-dashboard`: registers the dependency → detects the shipped `dsh.bundle.patch` → appends the plugin to `dsh.profile.bundles`;
-4. Removes leftover hand-written mount lines that would double-mount (two sidebars on the page).
-
-`curl | bash` / `irm | iex` executes remote code; the scripts live in the repo (`scripts/install.sh` / `scripts/install.ps1`) — download and review them first if you prefer. The plugin ships as the npm package `dsh-dashboard` and mounts via `dsh.bundle.patch` (the shipped `cordis.patch.yml`) through the official CLI; DSH source is never modified.
-
-</details>
-
-<details>
-<summary>Updating</summary>
-
-```sh
-dsh plugin --profile web add dsh-dashboard
-```
-
-or re-run the one-click script; or bump the version in `~/.dsh/profiles/web/package.json` and run `pnpm install`. Restart DSH and hard-refresh afterwards.
+The upstream [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) publishes `dsh-better-sidebar` to npm; this repo (renamed to dsh-dashboard) is **not published to npm** — install from source. The one-click scripts (`scripts/install.sh` / `scripts/install.ps1`, written for the npm channel) remain in the repo for reference or for use after publishing yourself.
 
 </details>
 
@@ -153,34 +113,19 @@ or re-run the one-click script; or bump the version in `~/.dsh/profiles/web/pack
 
 | Symptom | Cause and fix |
 |---|---|
-| `Ignored build scripts` | pnpm 11 blocked build scripts. Run `pnpm approve-builds --all` (the script handles it). |
-| `minimum release age` / version < 24h | The release is younger than 24 hours. Wait or re-run once (the script handles it). |
+| `Ignored build scripts` | pnpm 11 blocked build scripts. Run `pnpm approve-builds --all`. |
+| `minimum release age` / version < 24h | pnpm blocks dependency versions younger than 24 hours. Add the package under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`, or wait. |
 | "profile directory not found" | Run `dsh web` once to initialize `~/.dsh/profiles/web`. |
-| Two sidebars on the page | Double mount: a leftover hand-written insert line (`id: better-sidebar` or `id: dashboard`) in `~/.dsh/profiles/web/cordis.patch.yml` — delete it (the one-click script cleans it). |
+| Two sidebars on the page | Double mount: duplicate hand-written insert lines in `~/.dsh/profiles/web/cordis.patch.yml` (e.g. the upstream legacy `id: better-sidebar` alongside `id: dashboard`) — delete the redundant one. |
 | Terminal fails on Windows | `node-pty` relies on prebuilt binaries; install a build toolchain (VS Build Tools) if none matches your Node version. Mainstream versions are covered. |
-| No bash / curl on Windows | Use the PowerShell one-liner, or install Git Bash / WSL. |
+| No bash / curl on Windows | Use the PowerShell equivalent steps, or install Git Bash / WSL. |
 
 </details>
 
 <details>
-<summary>Install from source / develop</summary>
+<summary>Development</summary>
 
-To debug local changes or track the dev branch, point the dependency at a local clone and build it yourself:
-
-```text
-1. git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboard
-   cd ~/Code/dsh-dashboard && pnpm install && pnpm build
-2. In ~/.dsh/profiles/web/package.json dependencies write
-   "dsh-dashboard": "link:<absolute path of the clone>"
-3. Append this mount line to ~/.dsh/profiles/web/cordis.patch.yml:
-   - insert:
-       - id: dashboard
-         name: 'dsh-dashboard'
-4. Run pnpm install in ~/.dsh/profiles/web
-5. Restart DSH and hard-refresh
-```
-
-Update: `git pull && pnpm install && pnpm build`, then restart DSH (client-only changes need only a hard-refresh). To switch back to the npm channel, restore `"dsh-dashboard": "^0.10.4"` and re-run `pnpm install`.
+Clone, then `pnpm install && pnpm build`; daily loop with `pnpm watch` (tsdown incremental) + `pnpm test`. Keep the profile dependency as a `link:` to your working tree during development; client-only changes take effect on hard-refresh, host-half changes need a DSH restart.
 
 </details>
 

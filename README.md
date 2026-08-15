@@ -4,6 +4,8 @@
 
 **核心能力**：文件资源管理、编辑与多种格式预览、内嵌浏览器、真实终端、Git 面板、后台任务视图，以及供第三方插件注册扩展页面与文件预览器的 `ctx.dashboard` 服务。
 
+基于 [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) 二次开发（fork，v0.10.3），后续演进独立进行；上游的接入文档由本仓库的 [AGENTS.md](./AGENTS.md) 延续。
+
 <div align="center">
 
 中文 · <a href="./README_EN.md">English</a>
@@ -50,101 +52,59 @@ DSH 的会话视图原生提供对话流与轨迹两栏，长任务中对工作�
 - **声明式设置**：设置页按注册表渲染功能清单（可逐项启停），功能相关的二级设置经原生弹窗编辑。
 - **多语言**：界面文案跟随 DSH 语言设置（zh/en），Host 偏好优先于浏览器语言，切换实时生效。
 
-## 安装
+## 安装（从源码）
 
-前置：DSH 已安装（`dsh web` 可运行），Node.js ≥ 20，pnpm ≥ 10。
-
-**macOS / Linux**（Windows 下 Git Bash / WSL 亦可）：
+从源码构建安装。前置：DSH 已安装（`dsh web` 可运行），Node.js ≥ 20，pnpm ≥ 10。
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.sh | bash
+# 1. 克隆并构建
+git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboard
+cd ~/Code/dsh-dashboard && pnpm install && pnpm build
+
+# 2. 放行 node-pty / protobufjs 构建脚本（pnpm 11 默认拦截；pnpm 10 可跳过）
+cd ~/.dsh/profiles/web && pnpm approve-builds --all
+
+# 3. 依赖指向本地克隆（package.json 的 dependencies）
+#    "dsh-dashboard": "link:/home/you/Code/dsh-dashboard"
+
+# 4. 追加挂载行（cordis.patch.yml）
+#    - insert:
+#        - id: dashboard
+#          name: 'dsh-dashboard'
+
+# 5. 安装并重启
+pnpm install
 ```
 
-**Windows（PowerShell 5.1+ / pwsh）**：
+完成后重启 DSH 并硬刷新（Cmd/Ctrl+Shift+R）。
 
-```powershell
-irm https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.ps1 | iex
-```
-
-安装后重启 DSH 并硬刷新（Cmd/Ctrl+Shift+R）。
+更新：`git pull && pnpm install && pnpm build` 后重启 DSH（仅 client 改动可硬刷新）。
 
 <details>
-<summary>固定版本 / 安装后自动重启</summary>
-
-```sh
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.sh | bash -s 0.10.4 --restart
-
-# Windows PowerShell
-& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/Howardzhangdqs/dsh-dashboard/main/scripts/install.ps1'))) -Version 0.10.4 -Restart
-```
-
-可先加 `--dry-run`（PowerShell 为 `-DryRun`）预览执行步骤。
-
-</details>
-
-<details>
-<summary>手动安装（逐步命令）</summary>
-
-与一键脚本等价。**第 ③ 步可重复执行；①② 只需一次。**
-
-**macOS / Linux（bash）**：
-
-```sh
-cd ~/.dsh/profiles/web
-
-# ① 放行 node-pty / protobufjs 构建脚本（pnpm 11 默认拦截；pnpm 10 可跳过）
-pnpm approve-builds --all
-
-# ② 放行发布不足 24h 的版本（装旧版本可跳过；键已存在时把该行并入其下）
-cat >> pnpm-workspace.yaml <<'EOF'
-minimumReleaseAgeExclude:
-  - dsh-dashboard
-EOF
-
-# ③ 安装并自动挂载（不带 @版本 = npm latest；固定版本写 dsh-dashboard@0.10.4）
-npx -y --package @deepseek-ai/dsh dsh plugin --profile web add dsh-dashboard
-```
-
-**Windows（PowerShell）**：
+<summary>Windows（PowerShell）等价步骤</summary>
 
 ```powershell
+git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboard
+cd ~/Code/dsh-dashboard; pnpm install; pnpm build
+
 cd ~\.dsh\profiles\web
-
-# ① 放行构建脚本
 pnpm approve-builds --all
-
-# ② 放行新版本（一次性；键已存在时把 - dsh-dashboard 并入其下）
-Add-Content -Path pnpm-workspace.yaml -Value "`nminimumReleaseAgeExclude:`n  - dsh-dashboard"
-
-# ③ 安装并自动挂载
-npx -y --package @deepseek-ai/dsh dsh plugin --profile web add dsh-dashboard
+# package.json dependencies: "dsh-dashboard": "link:<克隆绝对路径>"
+# cordis.patch.yml 追加:
+#   - insert:
+#       - id: dashboard
+#         name: 'dsh-dashboard'
+pnpm install
 ```
+
+路径含空格时给 link: 值加引号。重启 DSH 后硬刷新。
 
 </details>
 
 <details>
-<summary>一键脚本的行为说明</summary>
+<summary>npm 通道（上游发布过旧名包；本仓库未发布 npm）</summary>
 
-脚本完成四件事，均幂等：
-
-1. 预写 `allowBuilds`（node-pty / protobufjs），规避 pnpm 11 的构建脚本拦截；
-2. 预写 `minimumReleaseAgeExclude`，放行发布不足 24 小时的版本；
-3. 执行 `dsh plugin --profile web add dsh-dashboard`：登记依赖 → 识别包内 `dsh.bundle.patch` → 自动加入 `dsh.profile.bundles` 挂载；
-4. 清理旧版残留的手动挂载行，避免双挂载（页面出现两个侧边栏）。
-
-`curl | bash` / `irm | iex` 会执行远程代码；脚本随仓库开源（`scripts/install.sh` / `scripts/install.ps1`），可先下载审阅。插件以 npm 包 `dsh-dashboard` 发布，经 `dsh.bundle.patch`（随包的 `cordis.patch.yml`）由官方 CLI 自动挂载，不修改 DSH 源码。
-
-</details>
-
-<details>
-<summary>更新</summary>
-
-```sh
-dsh plugin --profile web add dsh-dashboard
-```
-
-或重跑一键脚本；或将 `~/.dsh/profiles/web/package.json` 中的版本号调高后 `pnpm install`。更新后重启 DSH 并硬刷新。
+上游 [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) 以 `dsh-better-sidebar` 发布到 npm；本仓库（改名后的 dsh-dashboard）**不发布 npm**，请从源码安装。仓内仍保留一键脚本（`scripts/install.sh` / `scripts/install.ps1`，按 npm 通道编写）供参考或自行发布后使用。
 
 </details>
 
@@ -153,34 +113,19 @@ dsh plugin --profile web add dsh-dashboard
 
 | 现象 | 原因与处理 |
 |---|---|
-| `Ignored build scripts` | pnpm 11 拦截构建脚本。执行 `pnpm approve-builds --all`（一键脚本已处理）。 |
-| `minimum release age` / 版本不足 24h | 所装版本发布不足 24 小时。等待或重跑一次（一键脚本已处理）。 |
+| `Ignored build scripts` | pnpm 11 拦截构建脚本。执行 `pnpm approve-builds --all`。 |
+| `minimum release age` / 版本不足 24h | pnpm 拦截发布不足 24 小时的依赖版本。在 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 下加该包名，或等待 24 小时。 |
 | 「找不到 profile 目录」 | 先运行一次 `dsh web` 初始化 `~/.dsh/profiles/web`。 |
-| 页面出现两个侧边栏 | 双挂载：`~/.dsh/profiles/web/cordis.patch.yml` 残留旧的手动挂载行（`id: better-sidebar` 或 `id: dashboard` 的 insert），删除该段（一键脚本会自动清理）。 |
+| 页面出现两个侧边栏 | 双挂载：`~/.dsh/profiles/web/cordis.patch.yml` 存在重复的手动挂载行（如上游旧名 `id: better-sidebar` 与 `id: dashboard` 并存），删除多余的那段。 |
 | Windows 终端不可用 | `node-pty` 依赖预编译二进制；当前 Node 版本无对应产物时需编译工具链（VS Build Tools）。主流 Node 版本一般已有预编译。 |
-| Windows 无 bash / curl | 使用 PowerShell 一键命令，或安装 Git Bash / WSL。 |
+| Windows 无 bash / curl | 使用 PowerShell 等价步骤，或安装 Git Bash / WSL。 |
 
 </details>
 
 <details>
-<summary>从源码安装 / 开发</summary>
+<summary>开发</summary>
 
-调试本地改动或跟随开发分支时，将依赖指向本地克隆并自行构建：
-
-```text
-1. git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboard
-   cd ~/Code/dsh-dashboard && pnpm install && pnpm build
-2. 在 ~/.dsh/profiles/web/package.json 的 dependencies 中写
-   "dsh-dashboard": "link:<克隆目录绝对路径>"
-3. 在 ~/.dsh/profiles/web/cordis.patch.yml 追加挂载行：
-   - insert:
-       - id: dashboard
-         name: 'dsh-dashboard'
-4. 在 ~/.dsh/profiles/web 执行 pnpm install
-5. 重启 DSH 并硬刷新
-```
-
-更新：`git pull && pnpm install && pnpm build` 后重启 DSH（仅 client 改动可硬刷新）。切回 npm 通道时将依赖改回 `"dsh-dashboard": "^0.10.4"` 再 `pnpm install`。
+克隆后 `pnpm install && pnpm build`；日常循环用 `pnpm watch`（tsdown 增量）+ `pnpm test`。调试期 profile 依赖保持 `link:` 指向工作区即可；仅 client 改动硬刷新生效，host 半改动需重启 DSH。
 
 </details>
 
