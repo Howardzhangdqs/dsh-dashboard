@@ -64,8 +64,6 @@ export interface SidebarState {
   activePane: string | null
   /** Monotonic terminal tab counter (ids survive reloads). */
   nextTerminal: number
-  /** Monotonic browser tab counter (ids survive reloads; mirrors nextTerminal). */
-  nextBrowser: number
   /** Explorer expansion set (absolute directory paths). */
   expanded: string[]
   /** The right sidebar's split tree (the original workbench). */
@@ -156,7 +154,6 @@ export function makeDefaultState(width = PANEL_DEFAULT, panelOpen = true, seedEx
     width,
     activePane: leaf.id,
     nextTerminal: 1,
-    nextBrowser: 1,
     expanded: [],
     splits: leaf,
     bottomOpen: false,
@@ -433,8 +430,7 @@ export function activateTab(state: SidebarState, paneId: string, tabId: string):
 }
 
 /** Update the display fields of one open tab (title / path) without
- *  re-opening it. The browser tab persists its current URL and hostname
- *  title through this reducer so a reload restores the visited page. A
+ *  re-opening it (an editor re-targets its file through this reducer). A
  *  missing tab id is a no-op. The tab may live in either tree. */
 export function patchTab(
   state: SidebarState,
@@ -790,12 +786,6 @@ export function sanitizeState(parsed: unknown): SidebarState | undefined {
   if (typeof record.nextTerminal !== 'number' || !Number.isInteger(record.nextTerminal) || record.nextTerminal < 1) {
     return undefined
   }
-  // nextBrowser arrived in a later build; a missing or malformed value on an
-  // OLDER persisted state defaults to 1 so existing layouts keep loading
-  // (unlike nextTerminal, which is strict — it predates the v1 shape).
-  const nextBrowser = typeof record.nextBrowser === 'number' && Number.isInteger(record.nextBrowser) && record.nextBrowser >= 1
-    ? record.nextBrowser
-    : 1
   if (typeof record.activePane !== 'string' && record.activePane !== null) return undefined
   if (!Array.isArray(record.expanded) || record.expanded.some(item => typeof item !== 'string')) return undefined
   // The seen/reid maps are SHARED across both trees: pane/split ids must be
@@ -808,7 +798,7 @@ export function sanitizeState(parsed: unknown): SidebarState | undefined {
   if (splits === undefined) return undefined
   // Bottom-panel fields arrived in a later build: a missing or malformed
   // value on an OLDER persisted state defaults (closed / default height /
-  // empty pane) so existing layouts keep loading, like nextBrowser.
+  // empty pane) so existing layouts keep loading.
   const bottomOpen = record.bottomOpen === true
   // Cap the persisted height so the center column (the agent output area)
   // keeps at least PANEL_MIN tall (a stale full-height bottom panel from an
@@ -829,7 +819,6 @@ export function sanitizeState(parsed: unknown): SidebarState | undefined {
     // new tabs still land in the pane the user was using.
     activePane: typeof record.activePane === 'string' ? (reid.get(record.activePane) ?? record.activePane) : null,
     nextTerminal: record.nextTerminal,
-    nextBrowser,
     expanded: record.expanded as string[],
     splits,
     bottomOpen,

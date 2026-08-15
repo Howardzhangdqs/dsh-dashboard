@@ -87,8 +87,6 @@ export const PrefsSchema: z<SidebarPrefs> = z.object({
   interceptOpenPath: z.boolean().default(true),
   htmlViewerNoSandbox: z.boolean().default(false),
   htmlViewerDefaultUnsafe: z.boolean().default(false),
-  browserNoSandbox: z.boolean().default(false),
-  browserInterceptLinks: z.boolean().default(true),
   codeSelectionFormat: z.string().default(SELECTION_FORMAT_DEFAULT),
   // Per-feature enable switches are OPEN maps (any tab/viewer id, built-in or
   // external): an absent key means enabled, so old documents resolve to {}

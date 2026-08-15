@@ -2,7 +2,7 @@
 
 A workbench plugin for the [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness) (DSH) web interface: adds a sidebar, a bottom panel, and a set of file/task tool surfaces to the session view. Single package with host/client halves, organized per the official DSH plugin conventions; the host source is never modified.
 
-**Capabilities**: file management, editing with multi-format preview, embedded browser, real terminal, Git panel, background-task view, and a `ctx.dashboard` service through which third-party plugins register extension pages and file viewers.
+**Capabilities**: file management, editing with multi-format preview, real terminal, Git panel, background-task view, and a `ctx.dashboard` service through which third-party plugins register extension pages and file viewers.
 
 Derived from [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) (forked at v0.10.3) and evolved independently since; the upstream integration docs continue in this repo's [AGENTS.md](./AGENTS.md).
 
@@ -40,7 +40,6 @@ See the releases page for a demo video and screenshots.
 
 ### Extension surfaces
 
-- **Browser**: embedded browsing tabs (multiple), back/forward/refresh; content renders in an opaque-origin sandboxed iframe (see Security); the UI shows sandbox status live; sites refusing embedding (X-Frame-Options) get a reason panel.
 - **Terminal**: xterm.js + node-pty real shell (max 3 UI instances per session), tab keep-alive with reconnect/replay; optionally injects 8 `terminal_*` tools for the model.
 - **Git panel**: real diffs and diff tabs, lazy-loaded history, stage/discard/commit/revert/cherry-pick.
 - **Background tasks**: the main session's full agent topology with click-through to execution records; the same page aggregates the current tree's background jobs (type badges + exit codes; live output is a non-consuming peek that does not disturb the model's `job_output`; force-kill after a confirmation step).
@@ -48,7 +47,7 @@ See the releases page for a demo video and screenshots.
 
 ### Platform services
 
-- **`ctx.dashboard` service**: third-party plugins register sidebar pages (tabs) and file viewers; the 7 built-in tabs and 9 viewers register through the same service. Renamed with the package in v0.10.4 — the legacy `ctx.betterSidebar` id still resolves as a compatibility alias, so existing consumers need no changes.
+- **`ctx.dashboard` service**: third-party plugins register sidebar pages (tabs) and file viewers; the 6 built-in tabs and 9 viewers register through the same service. Renamed with the package in v0.10.4 — the legacy `ctx.betterSidebar` id still resolves as a compatibility alias, so existing consumers need no changes.
 - **Declarative settings**: the settings page renders a registry-driven feature inventory (each item toggleable); feature-level secondary settings edit in a native dialog.
 - **i18n**: UI copy follows the DSH language setting (zh/en); the host preference takes priority over the browser language and switches live.
 
@@ -208,7 +207,7 @@ pnpm watch        # tsdown --watch
 ## Security
 
 - Routes sit behind the Host-header trust fence (same as `/api`); `fs.write` is atomic; media/preview routes serve only files inside the session cwd; git only shells out to the CLI and never sets identity.
-- HTML preview and browser tab content render in **opaque-origin sandboxed iframes**: no `allow-same-origin` / `allow-top-navigation`, `no-referrer`, all permission policies disabled; the `/sidebar/html` route adds a CSP `sandbox` plus size/path bounds; the address bar rejects `javascript:` / `data:` / `file:` and local addresses such as localhost.
+- HTML preview content renders in an **opaque-origin sandboxed iframe**: no `allow-same-origin` / `allow-top-navigation`, `no-referrer`, all permission policies disabled; the `/sidebar/html` route adds a CSP `sandbox` plus size/path bounds.
 - The UI shows sandbox status live (red warning when off) and can temporarily unlock the current page; the settings page can disable the sandbox per feature (off by default with a warning) — when off, content shares the UI's origin; recommended only for fully trusted content.
 
 ## Known limitations

@@ -2,7 +2,7 @@
 
 [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness)（DSH）web 界面的工作台插件：为会话视图补充侧边栏、底部面板与一组文件/任务工具面。单包双半结构（host + client），按 DSH 官方插件规范组织，不修改宿主源码。
 
-**核心能力**：文件资源管理、编辑与多种格式预览、内嵌浏览器、真实终端、Git 面板、后台任务视图，以及供第三方插件注册扩展页面与文件预览器的 `ctx.dashboard` 服务。
+**核心能力**：文件资源管理、编辑与多种格式预览、真实终端、Git 面板、后台任务视图，以及供第三方插件注册扩展页面与文件预览器的 `ctx.dashboard` 服务。
 
 基于 [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) 二次开发（fork，v0.10.3），后续演进独立进行；上游的接入文档由本仓库的 [AGENTS.md](./AGENTS.md) 延续。
 
@@ -40,7 +40,6 @@ DSH 的会话视图原生提供对话流与轨迹两栏，长任务中对工作�
 
 ### 扩展面
 
-- **浏览器**：内嵌网页浏览标签（可多开），后退/前进/刷新；内容在不透明源沙箱 iframe 中渲染（详见「安全」），界面实时显示沙箱状态；被 `X-Frame-Options` 等拒绝嵌入的站点显示原因面板。
 - **终端**：xterm.js + node-pty 真实 shell（每会话 3 个界面实例上限），标签保活、断线重连回放；可选择为模型注入 8 个 `terminal_*` 工具。
 - **Git 面板**：真实 diff 与 diff 标签页、懒加载提交历史、暂存/放弃/提交/还原/捡取。
 - **后台任务页**：主会话的完整 agent 拓扑与执行记录跳转；同页汇总当前树的后台任务（类型徽标 + 退出码，实时输出为非消费式 peek，不干扰模型的 `job_output`；二次确认后可强制终止）。
@@ -48,7 +47,7 @@ DSH 的会话视图原生提供对话流与轨迹两栏，长任务中对工作�
 
 ### 平台服务
 
-- **`ctx.dashboard` 服务**：第三方插件可注册侧边栏页面（tab）与文件预览器（viewer）；内置 7 个 tab 与 9 个 viewer 也经同一服务注册。v0.10.4 随包改名，旧服务名 `ctx.betterSidebar` 作为兼容别名仍然解析——已接入的外部插件无需修改。
+- **`ctx.dashboard` 服务**：第三方插件可注册侧边栏页面（tab）与文件预览器（viewer）；内置 6 个 tab 与 9 个 viewer 也经同一服务注册。v0.10.4 随包改名，旧服务名 `ctx.betterSidebar` 作为兼容别名仍然解析——已接入的外部插件无需修改。
 - **声明式设置**：设置页按注册表渲染功能清单（可逐项启停），功能相关的二级设置经原生弹窗编辑。
 - **多语言**：界面文案跟随 DSH 语言设置（zh/en），Host 偏好优先于浏览器语言，切换实时生效。
 
@@ -208,7 +207,7 @@ pnpm watch        # tsdown --watch
 ## 安全
 
 - 路由受 Host 头信任围栏保护（与 `/api` 一致）；`fs.write` 原子写入；媒体/预览路由仅限会话 cwd 内文件；git 仅调用 CLI，不设置身份。
-- HTML 预览与浏览器标签的内容在**不透明源沙箱 iframe** 中渲染：无 `allow-same-origin` / `allow-top-navigation`、`no-referrer`、权限策略全禁；`/sidebar/html` 路由附加 CSP `sandbox` 与大小/路径边界；地址栏拒绝 `javascript:` / `data:` / `file:` 与 localhost 等本机地址。
+- HTML 预览的内容在**不透明源沙箱 iframe** 中渲染：无 `allow-same-origin` / `allow-top-navigation`、`no-referrer`、权限策略全禁；`/sidebar/html` 路由附加 CSP `sandbox` 与大小/路径边界。
 - 界面实时显示沙箱状态（关闭时红色警示），可临时解锁当前页面；设置页可按功能关闭沙箱（默认关闭该开关并附警告文案）——关闭后内容与界面同源，仅建议用于完全可信内容。
 
 ## 已知限制

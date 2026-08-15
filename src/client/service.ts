@@ -216,19 +216,16 @@ export interface BetterSidebarService {
    * Open a tab (used by external tabs and the + menu). `title` overrides
    * the descriptor's title when given (the editor tab shows the file name);
    * when the descriptor provides `createTab` it mints the tab itself and
-   * `title`/`path`/`id` are ignored. `url` lands the tab with its `path`
-   * pre-set to the URL (the browser tab's navigation seed; the caller
-   * usually pairs it with a hostname `title`). A disabled tab type is a
-   * no-op.
+   * `title`/`path`/`id` are ignored. A disabled tab type is a no-op.
    *
-   * A CONTENT open (a `path` or `url` seed) must land in sight: when the
-   * panel hosting the landing pane is collapsed, it is expanded
-   * automatically (the right panel by default, the bottom panel when the
-   * active pane lives there; on narrow viewports the merged drawer opens).
-   * Type-only opens (the + menu, agent-terminal auto-tabs) never expand —
-   * the panel behavior is their caller's business.
+   * A CONTENT open (a `path` seed) must land in sight: when the panel
+   * hosting the landing pane is collapsed, it is expanded automatically
+   * (the right panel by default, the bottom panel when the active pane
+   * lives there; on narrow viewports the merged drawer opens). Type-only
+   * opens (the + menu, agent-terminal auto-tabs) never expand — the panel
+   * behavior is their caller's business.
    */
-  openTab(seed: { type: string; title?: string; path?: string; diff?: SidebarTab['diff']; id?: string; url?: string }): void
+  openTab(seed: { type: string; title?: string; path?: string; diff?: SidebarTab['diff']; id?: string }): void
   /** Close a tab by id. */
   closeTab(tabId: string): void
   /** Subscribe to registry changes (register/dispose). */
@@ -329,7 +326,7 @@ export function createBetterSidebarService(store: SidebarStore): BetterSidebarSe
     return undefined
   }
 
-  const openTab = (seed: { type: string; title?: string; path?: string; diff?: SidebarTab['diff']; id?: string; url?: string }): void => {
+  const openTab = (seed: { type: string; title?: string; path?: string; diff?: SidebarTab['diff']; id?: string }): void => {
     // A type the user disabled in settings never opens — neither from the
     // + menu nor from derived flows (file opens, subagent auto-open,
     // external plugins). Already-open tabs keep rendering.
@@ -361,19 +358,7 @@ export function createBetterSidebarService(store: SidebarStore): BetterSidebarSe
         }
         next = applyDedupe(state, tab, descriptor)
       }
-      // A URL seed pre-fills the tab's path (the browser tab navigates to it
-      // on mount). An explicit seed.title also wins over a createTab-minted
-      // default title (e.g. the sidebar-browser's hostname title).
-      let landed: SidebarState
-      if (seed.url !== undefined) {
-        landed = patchTab(next, tab.id, {
-          path: seed.url,
-          ...(seed.title !== undefined ? { title: seed.title } : {}),
-        })
-      } else {
-        landed = next
-      }
-      // A CONTENT open (file / browser) must land in sight: when the panel
+      // A CONTENT open (a file seed) must land in sight: when the panel
       // hosting the landing pane is collapsed, expand it. On narrow
       // viewports the two workbenches merge into one drawer, so the drawer
       // (panelOpen) is the only lever; on wide viewports the landing pane's
@@ -385,20 +370,20 @@ export function createBetterSidebarService(store: SidebarStore): BetterSidebarSe
       // too — the open must never land out of sight.
       if (
         typeof window !== 'undefined'
-        && (seed.path !== undefined || seed.url !== undefined)
+        && seed.path !== undefined
       ) {
         if (isNarrowWidth(window.innerWidth)) {
-          if (!landed.panelOpen) return togglePanel(landed)
+          if (!next.panelOpen) return togglePanel(next)
         } else {
-          const hostKey = treeOf(landed, landed.activePane ?? '')
+          const hostKey = treeOf(next, next.activePane ?? '')
           if (hostKey === 'bottomSplits') {
-            if (!landed.bottomOpen) return { ...landed, bottomOpen: true }
-          } else if (!landed.panelOpen) {
-            return togglePanel(landed)
+            if (!next.bottomOpen) return { ...next, bottomOpen: true }
+          } else if (!next.panelOpen) {
+            return togglePanel(next)
           }
         }
       }
-      return landed
+      return next
     })
   }
 

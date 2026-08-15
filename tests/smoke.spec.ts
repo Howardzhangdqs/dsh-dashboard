@@ -520,8 +520,6 @@ describe('side card settings routes', () => {
         interceptOpenPath: true,
         htmlViewerNoSandbox: false,
         htmlViewerDefaultUnsafe: false,
-        browserNoSandbox: false,
-        browserInterceptLinks: true,
         codeSelectionFormat: '@{path}{lines}',
         // The enable-switch maps default to {} (everything on).
         tabsEnabled: {},
@@ -561,63 +559,9 @@ describe('side card settings routes', () => {
   const respond = (status: number, headers: Record<string, string>): Response =>
     ({ status, url: 'https://site.example/', headers: new Headers(headers) }) as unknown as Response
 
-  it('reports X-Frame-Options and frame-ancestors from the target headers', async () => {
-    const route = mountWithSettings(undefined)
-    vi.stubGlobal('fetch', vi.fn(async () => respond(200, {
-      'x-frame-options': 'SAMEORIGIN',
-      'content-security-policy': "default-src 'self'; frame-ancestors 'none'",
-    })))
-    try {
-      const result = await invoke(route, 'browser.probe', { url: 'https://arxiv.org/' })
-      expect(result.ok).toBe(true)
-      expect(result.value).toEqual({
-        reachable: true,
-        url: 'https://site.example/',
-        status: 200,
-        xFrameOptions: 'SAMEORIGIN',
-        frameAncestors: ["'none'"],
-      })
-    } finally {
-      vi.unstubAllGlobals()
-    }
-  })
 
-  it('retries a 405 HEAD as GET', async () => {
-    const route = mountWithSettings(undefined)
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(respond(405, {}))
-      .mockResolvedValueOnce(respond(200, {}))
-    vi.stubGlobal('fetch', fetchMock)
-    try {
-      const result = await invoke(route, 'browser.probe', { url: 'https://example.com/' })
-      expect(result.ok).toBe(true)
-      expect(fetchMock).toHaveBeenCalledTimes(2)
-      expect(result.value).toMatchObject({ reachable: true, status: 200 })
-    } finally {
-      vi.unstubAllGlobals()
-    }
-  })
 
-  it('reports an unreachable target as reachable:false', async () => {
-    const route = mountWithSettings(undefined)
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ENOTFOUND') }))
-    try {
-      const result = await invoke(route, 'browser.probe', { url: 'https://example.com/' })
-      expect(result.ok).toBe(true)
-      expect(result.value).toEqual({ reachable: false })
-    } finally {
-      vi.unstubAllGlobals()
-    }
-  })
 
-  it('refuses non-http(s) and loopback URLs', async () => {
-    const route = mountWithSettings(undefined)
-    for (const url of ['javascript:alert(1)', 'file:///etc/passwd', 'http://127.0.0.1:8080/', 'http://localhost/']) {
-      const result = await invoke(route, 'browser.probe', { url })
-      expect(result.ok, url).toBe(false)
-      expect(result.error?.code, url).toBe('bad-request')
-    }
-  })
 })
 
 

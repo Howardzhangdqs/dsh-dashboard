@@ -28,7 +28,6 @@ import {
 } from './config.ts'
 import { isWithin, parentOf, requireAbsolute, listDirectory, rootLabel } from './fs-tree.ts'
 import { decodeHtmlUrl } from './html-route.ts'
-import { extractFrameAncestors } from './browser-probe.ts'
 import { isTrustedApiRequest, isLoopbackHostname } from './trust-fence.ts'
 import { registerBundleRoute } from './bundle-route.ts'
 import * as git from './git.ts'
@@ -377,55 +376,6 @@ function buildApi(
           throw new SidebarError('settings-conflict', error.message, 409)
         }
         throw new SidebarError('settings-rejected', error instanceof Error ? error.message : String(error), 400)
-      }
-    },
-    // Probe a URL's RESPONSE HEADERS so the sidebar browser can explain an
-    // iframe refusal: X-Frame-Options / CSP frame-ancestors are exactly the
-    // signals the browser enforces when it refuses to embed a site. The
-    // probe is display-only (headers back to the caller), restricted to
-    // http(s) non-loopback URLs with a hard timeout, and gated by the same
-    // trust fence as every other route — a cross-site page cannot reach it.
-    'browser.probe': async (payload) => {
-      const raw = requireString(payload, 'url')
-      let parsed: URL
-      try {
-        parsed = new URL(raw)
-      } catch {
-        throw new SidebarError('bad-request', 'invalid url', 400)
-      }
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new SidebarError('bad-request', 'only http/https urls can be probed', 400)
-      }
-      // Mirror the browser tab's address-bar policy: loopback stays unreachable
-      // from the sidebar, so probing it would leak nothing the tab could use.
-      if (isLoopbackHostname(parsed.hostname)) {
-        throw new SidebarError('bad-request', 'local addresses are not probed', 400)
-      }
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 8000)
-      try {
-        let response = await fetch(parsed, { method: 'HEAD', redirect: 'follow', signal: controller.signal })
-        // Some servers answer HEAD with 405/501; retry once as GET (the
-        // body is discarded — only the headers matter).
-        if (response.status === 405 || response.status === 501) {
-          response = await fetch(parsed, { method: 'GET', redirect: 'follow', signal: controller.signal })
-        }
-        const csp = response.headers.get('content-security-policy')
-        const frameAncestors = extractFrameAncestors(csp)
-        const xFrameOptions = response.headers.get('x-frame-options')
-        return {
-          reachable: true,
-          url: response.url,
-          status: response.status,
-          ...(xFrameOptions !== null ? { xFrameOptions } : {}),
-          ...(frameAncestors !== undefined ? { frameAncestors } : {}),
-        }
-      } catch {
-        // DNS / TLS / connection / timeout: nothing to judge — the client
-        // keeps the plain iframe.
-        return { reachable: false }
-      } finally {
-        clearTimeout(timer)
       }
     },
   }

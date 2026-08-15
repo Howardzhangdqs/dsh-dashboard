@@ -5,7 +5,7 @@
  * temporary unlock) with a restore action.
  *
  * The temporary unlock is component state only — it never writes the
- * global side card setting (`htmlViewerNoSandbox` / `browserNoSandbox`);
+ * global side card setting (`htmlViewerNoSandbox`);
  * it lasts until the surface unmounts (tab switch / file switch) or the
  * user restores the sandbox from the row. When the global setting already
  * drops the sandbox, no unlock/restore action is offered (changing the

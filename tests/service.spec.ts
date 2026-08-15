@@ -307,27 +307,6 @@ describe('service.openTab dedupe', () => {
     expect(tab?.title).toBe('main.ts')
   })
 
-  it('a url seed lands the tab with its path pre-set (the sidebar-browser navigation seed)', () => {
-    const store = createSidebarStore()
-    const service = createBetterSidebarService(store)
-    service.registerTab({
-      id: 'browser',
-      title: () => 'Browser',
-      createTab: (state) => ({
-        tab: { id: `browser:${state.nextBrowser}`, type: 'browser', title: 'Browser' },
-        patch: { nextBrowser: state.nextBrowser + 1 },
-      }),
-      component: () => null,
-    })
-    store.setSession('s1')
-    service.openTab({ type: 'browser', url: 'https://example.com/x', title: 'example.com' })
-    const state = store.getSnapshot().state!
-    const tab = allLeaves(state.splits).flatMap(l => l.tabs).find(t => t.type === 'browser')
-    expect(tab?.id).toBe('browser:1')
-    expect(tab?.path).toBe('https://example.com/x')
-    expect(tab?.title).toBe('example.com')
-    expect(state.nextBrowser).toBe(2)
-  })
 
   it('the descriptor title is the default when no title is given', () => {
     const store = createSidebarStore()
@@ -491,15 +470,15 @@ describe('service.openTab auto-expand for content opens', () => {
     }
   })
 
-  it('expands the collapsed drawer for a URL (browser) open on a narrow viewport', () => {
+  it('expands the collapsed drawer for a content (path) open on a narrow viewport', () => {
     setWidth(390)
     try {
       const store = createSidebarStore()
       const service = createBetterSidebarService(store)
-      service.registerTab({ id: 'browser', title: 'Browser', component: () => null })
+      service.registerTab({ id: 'editor', title: 'Editor', dedupeKey: tab => tab.path, component: () => null })
       store.setSession('s1')
       store.reduce(s => ({ ...s, panelOpen: false }))
-      service.openTab({ type: 'browser', url: 'https://example.com', title: 'example.com' })
+      service.openTab({ type: 'editor', path: '/p/main.ts', title: 'main.ts' })
       expect(store.getSnapshot().state?.panelOpen).toBe(true)
     } finally {
       setWidth(1024)
@@ -533,13 +512,13 @@ describe('service.openTab auto-expand for content opens', () => {
     expect(allLeaves(state.splits).flatMap(l => l.tabs).some(t => t.type === 'editor')).toBe(true)
   })
 
-  it('expands the collapsed right panel for a URL (browser) open on a wide viewport', () => {
+  it('expands the collapsed right panel for a content (path) open on a wide viewport', () => {
     const store = createSidebarStore()
     const service = createBetterSidebarService(store)
-    service.registerTab({ id: 'browser', title: 'Browser', component: () => null })
+    service.registerTab({ id: 'editor', title: 'Editor', dedupeKey: tab => tab.path, component: () => null })
     store.setSession('s1')
     collapseRightPanel(store)
-    service.openTab({ type: 'browser', url: 'https://example.com', title: 'example.com' })
+    service.openTab({ type: 'editor', path: '/p/main.ts', title: 'main.ts' })
     expect(store.getSnapshot().state!.panelOpen).toBe(true)
   })
 

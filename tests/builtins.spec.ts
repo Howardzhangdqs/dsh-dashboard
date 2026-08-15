@@ -22,10 +22,10 @@ function setup(): { service: ReturnType<typeof createBetterSidebarService>; stor
 }
 
 describe('built-in tab registrations', () => {
-  it('registers the 7 built-in tabs', () => {
+  it('registers the 6 built-in tabs', () => {
     const { service } = setup()
     expect(service.getTabs().map(t => t.id).sort()).toEqual(
-      ['browser', 'diff', 'editor', 'explorer', 'git', 'subagent', 'terminal'],
+      ['diff', 'editor', 'explorer', 'git', 'subagent', 'terminal'],
     )
   })
 
@@ -53,28 +53,7 @@ describe('built-in tab registrations', () => {
     expect(toggles.map(t => t.key)).toEqual(['agentTerminalTools', 'bottomPanelAutoTerminal'])
   })
 
-  it('the browser tab declares its sandbox and link-takeover related settings', () => {
-    const { service } = setup()
-    const toggles = service.getTab('browser')?.settings?.toggles ?? []
-    expect(toggles.map(t => t.key)).toEqual(['browserNoSandbox', 'browserInterceptLinks'])
-    expect(toggles[0]?.title).toBeDefined()
-    expect(toggles[0]?.desc).toBeDefined()
-    expect(toggles[1]?.title).toBeDefined()
-    expect(toggles[1]?.desc).toBeDefined()
-  })
 
-  it('the browser createTab mints browser:<n> ids and bumps nextBrowser', () => {
-    const { service, store } = setup()
-    store.setSession('s1')
-    service.openTab({ type: 'browser' })
-    service.openTab({ type: 'browser' })
-    const state = store.getSnapshot().state!
-    const tabs = allLeaves(state.splits).flatMap(leaf => leaf.tabs).filter(t => t.type === 'browser')
-    expect(tabs).toHaveLength(2)
-    expect(tabs[0]!.id).toBe('browser:1')
-    expect(tabs[1]!.id).toBe('browser:2')
-    expect(state.nextBrowser).toBe(3)
-  })
 
   it('every built-in tab carries the settings-surface icon', () => {
     const { service } = setup()

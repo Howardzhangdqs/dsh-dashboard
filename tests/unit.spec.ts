@@ -476,29 +476,6 @@ describe('sidebar state', () => {
     expect(after).toBe(s)
   })
 
-  it('sanitize accepts nextBrowser (defaulting a missing/malformed one to 1)', () => {
-    const base = {
-      panelOpen: true,
-      width: 400,
-      nextTerminal: 1,
-      activePane: 'pane:1',
-      expanded: [],
-      splits: {
-        kind: 'leaf',
-        id: 'pane:1',
-        active: null,
-        tabs: [{ id: 't', type: 'explorer', title: 'Explorer' }],
-      },
-    }
-    // Older persisted states lack the field: they must keep loading.
-    expect(sanitizeState(base)?.nextBrowser).toBe(1)
-    // A present valid value survives; a malformed one falls back to 1.
-    expect(sanitizeState({ ...base, nextBrowser: 7 })?.nextBrowser).toBe(7)
-    expect(sanitizeState({ ...base, nextBrowser: 'x' })?.nextBrowser).toBe(1)
-    expect(sanitizeState({ ...base, nextBrowser: 0 })?.nextBrowser).toBe(1)
-    // The default state seeds 1.
-    expect(makeDefaultState().nextBrowser).toBe(1)
-  })
 
   it('tabOpenIn: a tab is open until it is truly closed, wherever it lives', () => {
     let s = state()
@@ -1156,8 +1133,6 @@ describe('side card preferences', () => {
         interceptOpenPath: true,
         htmlViewerNoSandbox: false,
         htmlViewerDefaultUnsafe: false,
-        browserNoSandbox: false,
-        browserInterceptLinks: true,
         codeSelectionFormat: '@{path}{lines}',
         tabsEnabled: {},
         viewersEnabled: {},
@@ -1176,8 +1151,6 @@ describe('side card preferences', () => {
         interceptOpenPath: true,
         htmlViewerNoSandbox: false,
         htmlViewerDefaultUnsafe: false,
-        browserNoSandbox: false,
-        browserInterceptLinks: true,
         codeSelectionFormat: '@{path}{lines}',
         tabsEnabled: {},
         viewersEnabled: {},
@@ -1196,8 +1169,6 @@ describe('side card preferences', () => {
         interceptOpenPath: true,
         htmlViewerNoSandbox: false,
         htmlViewerDefaultUnsafe: false,
-        browserNoSandbox: false,
-        browserInterceptLinks: true,
         codeSelectionFormat: '@{path}{lines}',
         tabsEnabled: {},
         viewersEnabled: {},

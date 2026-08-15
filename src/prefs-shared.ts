@@ -65,22 +65,6 @@ export interface SidebarPrefs {
    */
   htmlViewerDefaultUnsafe: boolean
   /**
-   * Whether the browser tab drops its sandboxed iframe. Sandbox ON (the
-   * default) keeps browsed sites in an opaque origin with no GUI access;
-   * turning it OFF runs any visited site with the GUI's own origin — it
-   * can read session data and act as the logged-in GUI. Only for trusted
-   * sites; the setting copy warns.
-   */
-  browserNoSandbox: boolean
-  /**
-   * Whether clicking an http(s) EXTERNAL link in the GUI (chat messages,
-   * tool rows, prose mentions) opens the sidebar browser instead of a new
-   * browser tab. On by default; gated on the browser tab's own enable
-   * switch (both must be on for the takeover). Ctrl/Cmd+click always
-   * bypasses the takeover.
-   */
-  browserInterceptLinks: boolean
-  /**
    * The custom format string for the viewer selection popup's insert
    * (defaults to {@link SELECTION_FORMAT_DEFAULT}, i.e. `@path:lines`).
    * Placeholders — `{path}` (relative to the session cwd), `{abspath}`,
@@ -135,8 +119,7 @@ export const SIDEBAR_PREFS_DEFAULTS: SidebarPrefs = {
   interceptOpenPath: true,
   htmlViewerNoSandbox: false,
   htmlViewerDefaultUnsafe: false,
-  browserNoSandbox: false,
-  browserInterceptLinks: true,
+
   codeSelectionFormat: SELECTION_FORMAT_DEFAULT,
   tabsEnabled: {},
   viewersEnabled: {},

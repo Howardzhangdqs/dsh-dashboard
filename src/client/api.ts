@@ -7,7 +7,6 @@
  * request). Failures surface as {@link SidebarApiError} with the wire code.
  */
 import { encodeHtmlUrl } from '../html-route.ts'
-import type { BrowserProbeResult } from './browser.ts'
 
 /** One wire failure. */
 export class SidebarApiError extends Error {
@@ -186,10 +185,6 @@ export const api = {
       patch,
       ...(expectedRevision !== undefined ? { expectedRevision } : {}),
     }),
-  /** Probe a URL's response headers (the sidebar browser's embeddability
-   *  check; see the host's browser.probe route). */
-  browserProbe: (url: string, signal?: AbortSignal) =>
-    call<BrowserProbeResult>('browser.probe', { url }, signal),
 }
 
 /** Absolute URL of the media route for one path (images only). */
