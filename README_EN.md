@@ -47,7 +47,7 @@ See the releases page for a demo video and screenshots.
 
 ### Platform services
 
-- **`ctx.dashboard` service**: third-party plugins register sidebar pages (tabs) and file viewers; the 6 built-in tabs and 9 viewers register through the same service. Renamed with the package in v0.10.4 — the legacy `ctx.betterSidebar` id still resolves as a compatibility alias, so existing consumers need no changes.
+- **`ctx.dashboard` service**: third-party plugins register sidebar pages (tabs) and file viewers; the 6 built-in tabs and 9 viewers register through the same service. Renamed with the package in v0.10.5 — the legacy `ctx.betterSidebar` id still resolves as a compatibility alias, so existing consumers need no changes.
 - **Declarative settings**: the settings page renders a registry-driven feature inventory (each item toggleable); feature-level secondary settings edit in a native dialog.
 - **i18n**: UI copy follows the DSH language setting (zh/en); the host preference takes priority over the browser language and switches live.
 
@@ -112,7 +112,7 @@ Quote the link: value if the path contains spaces. Restart DSH, then hard-refres
 Every release ships a prebuilt `pnpm pack` tarball as a [GitHub Release](https://github.com/Howardzhangdqs/dsh-dashboard/releases) asset (contains the `lib/` output and `dsh.plugin.json`; no sourcemaps). `dsh plugin add` accepts any pnpm dependency spec, so pointing it at the asset URL works directly:
 
 ```sh
-dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.4/dsh-dashboard-0.10.4.tgz
+dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.5/dsh-dashboard-0.10.5.tgz
 ```
 
 pnpm runs no build scripts for remote tarballs — the prebuilt artifacts install as-is, and the package's `dsh.bundle` declaration makes `dsh plugin` mount it automatically. The `node-pty` native module still needs its build allowed in the profile directory (add `onlyBuiltDependencies: [node-pty, protobufjs]` to `pnpm-workspace.yaml`, then `pnpm rebuild node-pty`; requires make/g++/python3). To upgrade, bump the version in the URL and re-run.
@@ -178,7 +178,7 @@ Update: `git pull && pnpm install && pnpm build` → `node scripts/package-regis
 
 ## Service: registering pages and file viewers
 
-Since v0.4.0 the plugin exposes the `ctx.dashboard` service (renamed with the package in v0.10.4; the legacy `ctx.betterSidebar` id still resolves as a compatibility alias), through which third-party plugins register sidebar pages and file viewers:
+Since v0.4.0 the plugin exposes the `ctx.dashboard` service (renamed with the package in v0.10.5; the legacy `ctx.betterSidebar` id still resolves as a compatibility alias), through which third-party plugins register sidebar pages and file viewers:
 
 ```ts
 import type {} from 'dsh-dashboard'  // triggers the ctx.dashboard type merge

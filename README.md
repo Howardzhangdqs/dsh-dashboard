@@ -47,7 +47,7 @@ DSH 的会话视图原生提供对话流与轨迹两栏，长任务中对工作�
 
 ### 平台服务
 
-- **`ctx.dashboard` 服务**：第三方插件可注册侧边栏页面（tab）与文件预览器（viewer）；内置 6 个 tab 与 9 个 viewer 也经同一服务注册。v0.10.4 随包改名，旧服务名 `ctx.betterSidebar` 作为兼容别名仍然解析——已接入的外部插件无需修改。
+- **`ctx.dashboard` 服务**：第三方插件可注册侧边栏页面（tab）与文件预览器（viewer）；内置 6 个 tab 与 9 个 viewer 也经同一服务注册。v0.10.5 随包改名，旧服务名 `ctx.betterSidebar` 作为兼容别名仍然解析——已接入的外部插件无需修改。
 - **声明式设置**：设置页按注册表渲染功能清单（可逐项启停），功能相关的二级设置经原生弹窗编辑。
 - **多语言**：界面文案跟随 DSH 语言设置（zh/en），Host 偏好优先于浏览器语言，切换实时生效。
 
@@ -112,7 +112,7 @@ pnpm install
 每个版本随 [GitHub Release](https://github.com/Howardzhangdqs/dsh-dashboard/releases) 附带 `pnpm pack` 产出的预构建 tarball（含 `lib/` 产物与 `dsh.plugin.json`，无 sourcemap）。`dsh plugin add` 接受任何 pnpm 依赖形式，直接指向附件 URL 即可：
 
 ```sh
-dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.4/dsh-dashboard-0.10.4.tgz
+dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.5/dsh-dashboard-0.10.5.tgz
 ```
 
 pnpm 对远程 tarball 不执行构建脚本，装的就是附件里的预构建产物；包内 `dsh.bundle` 声明使 `dsh plugin` 自动完成挂载。`node-pty` 原生模块仍需在 profile 目录放行构建（`pnpm-workspace.yaml` 加 `onlyBuiltDependencies: [node-pty, protobufjs]` 后 `pnpm rebuild node-pty`，需 make/g++/python3 工具链）。升级时改 URL 中的版本号重跑即可。
@@ -178,7 +178,7 @@ dsh registry enable dsh-external/dsh-dashboard
 
 ## 服务接口：注册页面与文件预览器
 
-自 v0.4.0 起暴露 `ctx.dashboard` 服务（v0.10.4 随包改名；旧名 `ctx.betterSidebar` 作为兼容别名仍然解析），第三方插件可注册侧边栏页面与文件预览器：
+自 v0.4.0 起暴露 `ctx.dashboard` 服务（v0.10.5 随包改名；旧名 `ctx.betterSidebar` 作为兼容别名仍然解析），第三方插件可注册侧边栏页面与文件预览器：
 
 ```ts
 import type {} from 'dsh-dashboard'  // 触发 ctx.dashboard 类型合并
