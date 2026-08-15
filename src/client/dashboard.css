@@ -1,0 +1,301 @@
+/*
+ * Dashboard drawer mode styling.
+ *
+ * Every selector is anchored on a STABLE attribute — either our own
+ * dsh-dash-* classes / data-dsh-* flags, or DSH attributes that are part of
+ * the layout contract (data-shell-overlay, data-side, aria-label). No css-module
+ * hashes, so this survives DSH patch versions unchanged.
+ */
+
+/* ── Frame grid: zero the sidebar track so the conversation reclaims the full
+ *    width while the sidebar floats above it. The details track is replayed
+ *    from the --dsh-dash-details var kept in sync by dashboard.ts. ────────── */
+:root[data-dsh-dashboard='on'] [data-dsh-frame] {
+  grid-template-columns: 0 minmax(0, 1fr) var(--dsh-dash-details, 0px) !important;
+}
+/* Pin the center & details columns to tracks 2/3 so lifting the sidebar
+ * column out of the grid (position: fixed) cannot reflow them into the
+ * zeroed first track — which would collapse the conversation. */
+:root[data-dsh-dashboard='on'] [data-dsh-center-col] { grid-column: 2; }
+:root[data-dsh-dashboard='on'] [data-dsh-details-col] { grid-column: 3; }
+
+/* The sidebar's own drag handle is positioned against the (now zeroed) track;
+ * hide it so it does not float at a stale offset. */
+:root[data-dsh-dashboard='on'] [data-side='sidebar'] {
+  display: none !important;
+}
+
+/* ── Sidebar column → overlay drawer ─────────────────────────────────────── */
+:root[data-dsh-dashboard='on'] [data-dsh-sidebar-col] {
+  position: fixed !important;
+  top: 0;
+  bottom: 0;
+  left: calc(-1 * var(--dsh-dash-w, 300px));
+  width: var(--dsh-dash-w, 300px);
+  max-width: 86vw;
+  z-index: 100;
+  transition: left 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  background: var(--dsw-specific-sidebar-fill, inherit);
+}
+:root[data-dsh-dashboard='on'][data-dsh-drawer='open'] [data-dsh-sidebar-col] {
+  left: 0;
+}
+/* Let the inner sidebar shell fill the drawer regardless of its inline width. */
+:root[data-dsh-dashboard='on'] [data-dsh-sidebar-col] > * {
+  width: 100% !important;
+}
+/* Hide the sidebar's built-in collapse toggle (aria-label is localized + EN)
+ * so it cannot fight the drawer while Dashboard is on. */
+:root[data-dsh-dashboard='on'] [data-dsh-sidebar-col]
+  [aria-label='收起侧边栏'],
+:root[data-dsh-dashboard='on'] [data-dsh-sidebar-col]
+  [aria-label='打开侧边栏'],
+:root[data-dsh-dashboard='on'] [data-dsh-sidebar-col]
+  [aria-label='Collapse sidebar'],
+:root[data-dsh-dashboard='on'] [data-dsh-sidebar-col]
+  [aria-label='Open sidebar'] {
+  display: none !important;
+}
+
+/* ── Sidebar foot cluster (sidebar.footer.action, above Settings) ──────────
+ * DSH renders foot actions in a fixed flex ROW whose collapsed rail is only
+ * 56px wide — sized for a single action. This plugin ships two toggles, so
+ * they are wrapped in one element that reflows: wide keeps the labeled
+ * buttons side by side (50/50), the collapsed rail stacks the icon-only
+ * squares vertically so the pair can never overflow the rail horizontally. */
+.dsh-dash-foot {
+  display: flex;
+  flex-direction: column; /* rail: vertical stack of icon squares */
+  align-items: center;
+  gap: 2px;
+  width: auto; /* parent shrinks to fit in rail mode — avoid a circular 100% */
+  min-width: 0;
+}
+.dsh-dash-foot .dsh-dash-toggle {
+  width: 36px; /* icon-only square; 36px fits the 56px rail with margin */
+  min-width: 36px;
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: 0;
+}
+.dsh-dash-foot.is-wide {
+  flex-direction: row; /* wide: labeled buttons share the row 50/50 */
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+}
+.dsh-dash-foot.is-wide .dsh-dash-toggle {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 0;
+  justify-content: flex-start;
+  padding: 0 8px;
+}
+
+/* Dashboard toggle button (sidebar.footer.action, above Settings) ─────── */
+.dsh-dash-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: flex-start;
+  height: 36px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #888);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.dsh-dash-toggle:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.12));
+  color: var(--dsw-alias-label-primary, #fff);
+}
+.dsh-dash-toggle.is-on {
+  background: var(--dsw-alias-interactive-bg-active, rgba(77, 107, 254, 0.16));
+  color: var(--dsw-alias-label-primary, #fff);
+}
+.dsh-dash-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ── Corner trigger (shell.overlay): a page-corner tab ─────────────────────
+ * Fixed at the viewport's bottom-left corner — it never rides the drawer.
+ * Only the interior-facing corner (top-right) is rounded; the other three
+ * stay square and hug the page edges. While the drawer is open the drawer
+ * itself owns that corner, so the trigger fades out of the way (no layout
+ * reserve, no content shift) and fades back when the drawer closes. */
+.dsh-dash-trigger {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  box-sizing: border-box;
+  /* Exposed sides only: top + right. The flush sides (left/bottom) meet the
+   * page edge and carry no border. */
+  border: none;
+  border-top: 1px solid var(--dsw-alias-border-l2, rgba(127, 127, 127, 0.25));
+  border-right: 1px solid var(--dsw-alias-border-l2, rgba(127, 127, 127, 0.25));
+  border-radius: 0 16px 0 0;
+  background: var(--dsw-alias-button-floating-fill, #1b1b22);
+  color: var(--dsw-alias-label-primary, #e6e6e6);
+  box-shadow: 4px -4px 16px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  z-index: 110;
+  transition: background 0.12s ease, transform 0.12s ease,
+    opacity 0.12s ease, visibility 0.12s;
+}
+/* Drawer open: the corner belongs to the drawer — step aside completely
+ * (also removes the button from the tab order while hidden). */
+:root[data-dsh-dashboard='on'][data-dsh-drawer='open'] .dsh-dash-trigger {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.dsh-dash-trigger:hover {
+  background: var(--dsw-alias-button-floating-hover, #26262f);
+}
+.dsh-dash-trigger:active {
+  transform: scale(0.94);
+}
+
+/* DeepSeek logo glyph (inlined SVG): sized by its container, fill by currentColor. */
+.dsh-dash-glyph { line-height: 0; }
+.dsh-dash-glyph svg { width: 100%; height: 100%; display: block; }
+.dsh-dash-glyph path { fill: currentColor; }
+
+/* ── Composer as a sidebar tab (peer of explorer/git; see dashboard.tsx) ────
+ * While the composer tab is visible, the DSH composer seat is PROJECTED onto
+ * the tab host's rect: the seat's DOM stays in its center-column React tree
+ * (adopting it into the panel breaks DSH's commits and its theming), but it
+ * is styled position:fixed at --dsh-composer-tab-left/bottom/w — vars kept
+ * in sync with the host's live rect by a rAF loop in dashboard.ts, so panel
+ * drag-resize is followed exactly. Clearing the flag lets the seat snap back
+ * to its normal center flow. */
+/* The tab host: a transparent placeholder that only defines the projection
+ * rect (full tab body; the composer floats above its bottom edge). */
+.dsh-composer-tabhost {
+  flex: 1;
+  min-height: 0;
+}
+/* Project the seat onto the host rect: horizontally centered by spanning
+ * the full host width, vertically centered on the host's midpoint
+ * (--dsh-composer-tab-cy) via translateY(-50%) — the centering holds at any
+ * card height, including while it grows with multiline input. Theming stays
+ * centered-inherited (the seat never left its subtree), so text and
+ * surfaces render exactly as they do in the center. */
+:root[data-dsh-composer-tab='on'] [data-composer-seat] {
+  position: fixed !important;
+  left: var(--dsh-composer-tab-left, 380px);
+  top: var(--dsh-composer-tab-cy, 50vh);
+  bottom: auto;
+  right: auto;
+  width: var(--dsh-composer-tab-w, 380px);
+  margin: 0 !important;
+  transform: translateY(-50%);
+  z-index: 200; /* above the panel so nothing slides between seat and host */
+}
+/* The composer CARD keeps a center-column max-width; projected onto the panel
+ * it must span the full projected width instead. !important beats the
+ * css-module rule that supplies it. */
+:root[data-dsh-composer-tab='on'] [data-composer-card] {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+/* Composer's inner hint row (<hash>_root, e.g. FJxK0a_root) is capped at
+ * --dsh-chat-content-width and padded by calc(var(--dsh-composer-side-clearance)
+ * + 16px) on each side, which squeezes it to a narrow centered strip when
+ * projected onto the panel. Unhook the cap and shrink the side padding so it
+ * spans the full card width. [class$='_root'] matches the css-module root
+ * regardless of the per-build hash. */
+:root[data-dsh-composer-tab='on'] [data-composer-seat] [class$='_root'] {
+  max-width: none !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+/* While the projection is active the center's flow no longer shows the
+ * composer (it is position:fixed), so drop the reserved composer height
+ * inside the conversation scroll. The scroll-to-bottom button sinks to the
+ * real bottom and the history fills the freed space.
+ * !important is required: DSH sets --dsh-composer-height as an INLINE style
+ * (JS-measured), which otherwise beats this rule. */
+:root[data-dsh-composer-tab='on'] [data-conversation-scroll] {
+  --dsh-composer-height: 0px !important;
+}
+/* Belt-and-suspenders: force the scroll-to-bottom button's own bottom too,
+ * since it resolves the var from a JS-inline value on a nearer ancestor. */
+:root[data-dsh-composer-tab='on'] [data-conversation-scroll] [class$='toBottomSlot'] {
+  bottom: 16px !important;
+}
+
+/* ── Conversation header: view tabs merged onto the title row ─────────────
+ * DSH renders the 对话/轨迹 view switcher as its own row UNDER the session
+ * title + mode-name row (~30px of pure spacing). Anchor on stable bits only
+ * (header element + css-module class SUFFIX + role attributes — no hashes):
+ * the header becomes one flex row, the title row keeps the flexible width,
+ * and the tablist rides the same line restyled as a compact segmented pill
+ * (the old full-width underline geometry only made sense on its own row).
+ * :has(> [role='tablist']) keeps this scoped to headers that actually carry
+ * a view switcher (blank sessions and single-view headers are untouched). */
+header[class$='_header']:has(> [role='tablist']) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 86px 6px 20px; /* right reserve: 12 gap + 60 toggles + 14 edge */
+  position: relative; /* containing block for the pinned toggles below */
+}
+/* The title row becomes the flexible child so the tabs pin to the right. */
+header[class$='_header']:has(> [role='tablist']) > [class$='_titleRow'] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* The panel toggles (rendered into the utilities slot) pin to the merged
+ * row's RIGHT EDGE — right of the view switcher pill, vertically centered
+ * against it. Anchored by css-module class-suffix match like every other
+ * rule here. The reserved right padding (above) keeps the switcher pill
+ * clear of them; single-view headers (no tablist) never match :has, so
+ * there the toggles simply flow inline in the utilities row. */
+header[class$='_header']:has(> [role='tablist']) [class*='_headerToggles'] {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* The switcher: compact segmented pill instead of an underline tab strip. */
+header[class$='_header'] > [role='tablist'] {
+  flex: none;
+  gap: 2px;
+  margin-top: 0;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.12));
+}
+header[class$='_header'] > [role='tablist'] [role='tab'] {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+/* The old underline indicator is meaningless mid-row — the pill fill marks
+ * the active view instead. */
+header[class$='_header'] > [role='tablist'] [role='tab']::after {
+  display: none;
+}
+header[class$='_header'] > [role='tablist'] [role='tab']:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.12));
+}
+header[class$='_header'] > [role='tablist'] [role='tab'][aria-selected='true'] {
+  background: var(--dsw-alias-interactive-bg-active, rgba(77, 107, 254, 0.16));
+  color: var(--dsw-alias-state-business-primary, inherit);
+}

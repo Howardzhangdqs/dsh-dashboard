@@ -1,0 +1,296 @@
+/**
+ * Layout push: when a panel is open it OCCUPIES the layout instead of
+ * floating over it — the app shell (#root, the AppFrame three-column grid)
+ * gives up space. Only the center column is flexible (1fr), so the right
+ * panel's width squeeze (margin-right on #root) lands exactly on the
+ * conversation output and the input bar, like a VSCode sidebar.
+ *
+ * The bottom panel squeezes ONLY the center column while the right panel
+ * is open — it must not cover the app's own left sidebar or the right
+ * panel. While the right panel is COLLAPSED it extends across the details
+ * (trajectory) column to the viewport's right edge, and that column's
+ * content lifts by the same height (see the body[data-dsh-sidebar-collapsed]
+ * rule below). DSH 0.1.x wraps slot hosts in
+ * [data-slot] containers, so the AppFrame grid lives one level deeper:
+ * #root > div[data-slot="root"] > div (the frame). Its grid items are
+ * (frame > div:nth-child(1..3)): sidebarCol, centerCol, detailsCol, so the
+ * vertical push lands on the center column alone. The fixed panels cover
+ * the vacated strips, which looks seamless because #root's background is
+ * the theme base.
+ *
+ * The sizes ride CSS variables updated by the Sidebar shell (0 while
+ * collapsed); expand/collapse animates both the margins and the panel
+ * slides on the same theme duration. Drags disable the transition so the
+ * layout tracks the pointer.
+ */
+#root {
+  margin-right: var(--dsh-sidebar-width, 0px);
+  transition: margin-right var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+/* The AppFrame's grid items are sidebarCol, centerCol, detailsCol (children
+   1-3 of #root > div[data-slot="root"] > div) — nth-child(2) is the center
+   column. A stretched grid item shrinks by its margins, so the conversation
+   content (output + input bar) lifts without touching the sidebars. */
+#root > div[data-slot="root"] > div > div:nth-child(2) {
+  margin-bottom: var(--dsh-sidebar-height, 0px);
+  transition: margin-bottom var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+/* While the right panel is COLLAPSED, the bottom panel extends across the
+   details (trajectory) column to the viewport's right edge (the Sidebar
+   shell writes right:0 inline) — so that column's content must lift by the
+   same bottom height. Keyed on the same body attribute the shell already
+   maintains for the right panel's closed state. Deliberately NOT
+   transitioned: the panel claims the strip the instant the right panel
+   collapses, and an easing margin would leave the panel covering the
+   trajectory's lower content while it catches up. Reopening snaps the lift
+   back out the same way; the bottom panel's edge then tracks the
+   conversation column per-frame as the grid squeezes (no gap, no cover). */
+body[data-dsh-sidebar-collapsed] #root > div[data-slot="root"] > div > div:nth-child(3) {
+  margin-bottom: var(--dsh-sidebar-height, 0px);
+}
+
+/* The panel toggles now live INSIDE the session header (the utilities
+   slot, right of the "Session log" capsule), so no fixed overlay covers
+   the header's right side anymore and no padding compensation is needed.
+   The body[data-dsh-sidebar-collapsed] attribute the shell sets remains
+   the key for the details-column lift rule above. */
+
+body[data-dsh-sidebar-dragging] #root,
+body[data-dsh-sidebar-dragging] #root > div[data-slot="root"] > div > div:nth-child(2) {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root,
+  #root > div[data-slot="root"] > div > div:nth-child(2) {
+    transition: none;
+  }
+}
+
+/* Material icon glyphs (inline SVG from the lazy icon-set member): the
+   injected <svg> must fill its fixed 16px span and never stretch rows. */
+.dsh-mit-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Thinking block: sticky collapse affordance ──────────────────────────
+ * The reasoning ("Think") row is a DisclosureRow whose toggle row (chevron
+ * + title) lives at the block's TOP — with a long body the user had to
+ * scroll all the way back up to collapse it. Pure-CSS fix, zero DOM
+ * changes: the toggle row is position:sticky within the thinking block's
+ * own bounds. It scrolls normally until the block's top passes the
+ * scrollport edge, then pins to the top of [data-conversation-scroll]
+ * (the conversation's real scroll container — no intermediate ancestor
+ * between it and the row carries overflow, so sticky resolves against
+ * it) and rides there until the block's END leaves view. Anchored on
+ * stable attributes only (data-variant="think" is unique to the reasoning
+ * row; data-disclosure-row is the primitive's own row marker) — no
+ * css-module hashes.
+ *
+ * The opaque background keeps body text from showing through the pinned
+ * row (bg-base is the conversation surface — the running-sweep gradient
+ * mixes with the same var). Sticky keeps the node in the thinking text's
+ * DOM; clicking the pinned row collapses exactly as clicking it in place
+ * does (same element, same handler). Collapsed blocks have no body to
+ * scroll, so the rule is a visual no-op there. */
+[data-variant='think'] [data-disclosure-row] {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--dsw-alias-bg-base);
+}
+
+/* ── Collapsed composer: one full-width input line ─────────────────────
+ * Keyed on <body data-dsh-composer-collapsed> (written by the toggle in
+ * src/client/composer-collapse.tsx; the button itself lives in the tool
+ * row's right-end slot, left of the model seat). Collapsed, the input
+ * card turns into a single flex row —
+ *   [+ attach] [permission icon] [one-line input] [expand] [model] [ring] [send]
+ * — WITHOUT moving any DOM: the tool row (.row: the flex container that
+ * holds .tools left / .trailing right BELOW the text area) is unwrapped
+ * with display:contents, so the two groups become direct flex items of
+ * the card, ordered around the (flex:1) text line; the sizing mirror
+ * ([data-input-mirror]) is clamped to one 24px line so the absolutely
+ * positioned textarea (and its decoration backdrop) shrink with it.
+ *
+ * Anchors are stable attributes and class SUFFIXES only (the css-module
+ * hash prefix rotates per build): [data-composer-card] /
+ * [data-input-scroll] / [data-input-mirror] from the InputBar markup;
+ * `_row`/`_tools`/`_trailing`/`_modes`/`_accessory`/`_attachments`/
+ * `_primary`/`_notice` from its module; `_trigger`/`_triggerLabel`/
+ * `_chevron` from the permission chip (scoped under `_modes` so the
+ * model chip's same-suffix classes are untouched). The hero variant
+ * (no workspace picked yet) is excluded by the :not([class*='_hero'])
+ * parent guard — its centered picker card keeps its native shape. */
+
+/* the card itself becomes the one row */
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 10px;
+}
+
+/* the accessory row and the attachments rail have no line budget — but
+ * they COLLAPSE (max-height + fade) rather than vanishing, so expanding
+ * the bar brings them back with the same motion as the rest of the fold.
+ * Generous expanded max-height caps (never reached in practice) keep the
+ * property interpolable for the transition. */
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] > [class$='_accessory'],
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] > [class$='_attachments'],
+div:not([class*='_hero']) > [data-composer-card] > [class$='_accessory'],
+div:not([class*='_hero']) > [data-composer-card] > [class$='_attachments'] {
+  overflow: hidden;
+  max-height: 240px;
+  transition:
+    max-height var(--dsh-fold-duration, 260ms) var(--ds-ease-in-out, ease-in-out),
+    padding-top var(--dsh-fold-duration, 260ms) var(--ds-ease-in-out, ease-in-out),
+    opacity calc(var(--dsh-fold-duration, 260ms) * 0.75) var(--ds-ease-in-out, ease-in-out);
+}
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] > [class$='_accessory'],
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] > [class$='_attachments'] {
+  max-height: 0;
+  padding-top: 0;
+  opacity: 0;
+}
+
+/* the tool row unwraps: .tools / .trailing become the card's flex items */
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] > [class$='_row'] {
+  display: contents;
+}
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [class$='_tools'] {
+  order: 0;
+  gap: 8px;
+  flex: none;
+}
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [class$='_trailing'] {
+  order: 20;
+  gap: 8px;
+  flex: none;
+}
+
+/* the text line: between the two groups, growing with content —
+ * the sizing mirror ([data-input-mirror], which carries draft + a trailing
+ * newline) is left at its NATURAL height, so the collapsed bar is one line
+ * when short and grows line-by-line as the draft wraps (the same mechanism
+ * the expanded composer uses); .scroll keeps its native cap
+ * (var(--dsh-composer-text-max-height)) so extreme drafts scroll inside
+ * instead of growing the bar forever. */
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] > [data-input-scroll] {
+  order: 10;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* text-line VERTICAL centering: the shared textarea/mirror/backdrop
+ * padding is 4px top / 0 bottom (the two-row card's native geometry) —
+ * in the one-line bar that asymmetry reads as the glyph sitting low with
+ * a visibly taller top edge. Equalize to 2px/2px: the 24px line box
+ * becomes a 28px sizer, exactly the neighboring buttons' height, with
+ * the text optically centered. The shared 16px LEFT padding exists to
+ * clear the expanded card's decoration backdrop (hint chips); the
+ * collapsed bar has no backdrop layers, so it tightens to 12px — flush
+ * with the row's own 12px right edge. */
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [data-input-mirror],
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [data-input-scroll] textarea,
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [data-input-backdrop] {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 12px;
+}
+
+/* permission chip: ANIMATED icon-only fold. The chip carries its own
+ * built-in glyph (shield / read-only mark — nothing custom drawn).
+ * Instead of display:none-ing the label/chevron (an instant, un-animatable
+ * jump), the trigger's WIDTH is the animated axis: max-width interpolates
+ * between the native 220px cap and a 28px square (14px icon + 0 7px
+ * padding), and overflow:hidden clips the label/chevron as they run out
+ * of room — the label natively ellipsizes (min-width:0, nowrap, overflow
+ * hidden), so the reveal/collapse reads as one smooth slide. Also two
+ * centering fixes carried over:
+ * (a) the Menu primitive wraps the trigger in a CLASSLESS span (its css
+ *     module is stubbed empty in this build); blockified in the flex row,
+ *     the inline-flex button still aligns to the line box's strut, and
+ *     the descent gap under it lifts the chip — flexing the wrapper kills
+ *     the strut;
+ * (b) the trigger's native padding is 0 4px 0 8px; icon-only that leaves
+ *     the glyph 2px off center — equalize to 0 7px (14px icon → 28px
+ *     square). The padding itself transitions alongside the width.
+ * The plan chip (its own `_wrap` span) stays hidden — its exit
+ * affordance is one expand away. */
+div:not([class*='_hero']) > [data-composer-card] [class$='_modes'] > span {
+  display: flex;
+  align-items: center;
+}
+div:not([class*='_hero']) > [data-composer-card] [class$='_modes'] [class$='_trigger'] {
+  overflow: hidden;
+  max-width: 220px;
+  transition:
+    max-width var(--dsh-fold-duration, 260ms) var(--ds-ease-in-out, ease-in-out),
+    padding var(--dsh-fold-duration, 260ms) var(--ds-ease-in-out, ease-in-out);
+}
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [class$='_modes'] [class$='_trigger'] {
+  max-width: 28px;
+  padding: 0 7px;
+}
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [class$='_modes'] > span[class$='_wrap'] {
+  display: none;
+}
+
+/* the stats line under the card ("N 轮 · M 步 | LLM … | …") is the
+ * composer.dock footer. Every slot render is wrapped in a
+ * <div data-slot="…" style="display:contents"> anchor (the SlotOutlet
+ * host wrapper) — that INLINE display beats any selector, so the band is
+ * hidden through its CHILDREN instead (the entries' own root elements
+ * carry no inline styles): collapsed they collapse to zero height and
+ * fade, expanding they grow back in step with the card's FLIP envelope.
+ * One line means ONE line — 0px is as gone as display:none. */
+body[data-dsh-composer-collapsed] [data-slot='conversation.composer.dock'] > *,
+[data-slot='conversation.composer.dock'] > * {
+  overflow: hidden;
+  max-height: 160px;
+  transition:
+    max-height var(--dsh-fold-duration, 260ms) var(--ds-ease-in-out, ease-in-out),
+    padding-top var(--dsh-fold-duration, 260ms) var(--ds-ease-in-out, ease-in-out),
+    opacity calc(var(--dsh-fold-duration, 260ms) * 0.75) var(--ds-ease-in-out, ease-in-out);
+}
+body[data-dsh-composer-collapsed] [data-slot='conversation.composer.dock'] > * {
+  max-height: 0;
+  padding-top: 0;
+  opacity: 0;
+}
+
+/* ── The fold's box animation ───────────────────────────────────────────
+ * Applied to the card by the JS FLIP in composer-collapse.tsx while the
+ * height transition runs: clips the reflowing children behind the card's
+ * border-radius so the envelope change reads as one continuous fold. */
+.dsh-composer-fold-anim {
+  overflow: hidden;
+  transition: height var(--dsh-fold-duration, 260ms) var(--ds-ease-in-out, ease-in-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dsh-composer-fold-anim,
+  [data-slot='conversation.composer.dock'] > *,
+  div:not([class*='_hero']) > [data-composer-card] > [class$='_accessory'],
+  div:not([class*='_hero']) > [data-composer-card] > [class$='_attachments'],
+  div:not([class*='_hero']) > [data-composer-card] [class$='_modes'] [class$='_trigger'] {
+    transition: none;
+  }
+}
+
+/* send/stop button: row-native 28px, without the 2-row card's offsets */
+body[data-dsh-composer-collapsed] div:not([class*='_hero']) > [data-composer-card] [class$='_primary'] {
+  width: 28px;
+  height: 28px;
+  transform: none;
+}
+
+/* the notice strip above the card has no line budget either */
+body[data-dsh-composer-collapsed] div:has(> [data-composer-card]) > [class$='_notice'] {
+  display: none;
+}

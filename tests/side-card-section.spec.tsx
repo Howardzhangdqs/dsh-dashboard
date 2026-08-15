@@ -1,0 +1,242 @@
+/**
+ * Side card settings section render tests: the section is DECLARATIVE —
+ * every small card (icon, title, type id, extensions, on/off state) derives
+ * from the sidebar service's tab/viewer registries instead of hardcoded
+ * copy. The toggles are CARDS in a responsive grid: the card's main area is
+ * the switch, the visual state IS the state (highlighted = enabled),
+ * announced via `aria-pressed`, and the check badge sits at the far right.
+ * Features that declare related settings carry a gear corner button whose
+ * popup rows (native checkboxes) are tested through the extracted
+ * FeatureSettingsRows component (the Modal portal renders only while open).
+ *
+ * Rendered with renderToString (mount effects — the settings RPC sync — do
+ * not run in SSR; the initial store prefs are the render input).
+ */
+import { describe, expect, it } from 'vitest'
+import { renderToString } from 'react-dom/server'
+import { createElement } from 'react'
+import { createSidebarStore, type SidebarStore } from '../src/client/state.ts'
+import { createBetterSidebarService, type BetterSidebarService } from '../src/client/service.ts'
+import { SIDEBAR_PREFS_DEFAULTS } from '../src/prefs-shared.ts'
+import { FeatureSettingsRows, SideCardSection, type SideCardSectionProps } from '../src/client/SideCardSection.tsx'
+
+/** One tab + one viewer + the subagent-style nested toggle under a tab. */
+function mount(): { store: SidebarStore; service: BetterSidebarService } {
+  const store = createSidebarStore()
+  const service = createBetterSidebarService(store)
+  service.registerTab({
+    id: 'explorer',
+    title: () => 'Explorer',
+    icon: () => createElement('svg', { 'data-icon': 'explorer' }),
+    order: 10,
+    component: () => null,
+  })
+  service.registerTab({
+    id: 'subagent',
+    title: () => 'Subagents',
+    icon: () => createElement('svg', { 'data-icon': 'subagent' }),
+    order: 30,
+    settings: {
+      toggles: [{
+        key: 'autoOpenSubagent',
+        title: () => 'Auto-open Subagents',
+        desc: () => 'Expand on new subagent',
+      }],
+    },
+    component: () => null,
+  })
+  service.registerFileViewer({
+    id: 'image',
+    title: () => 'Image',
+    icon: () => createElement('svg', { 'data-icon': 'image' }),
+    exts: ['png', 'jpg'],
+    fetchStrategy: 'mediaUrl',
+    component: () => null,
+  })
+  service.registerFileViewer({
+    id: 'code',
+    title: () => 'Code',
+    icon: () => createElement('svg', { 'data-icon': 'code' }),
+    exts: [],
+    priority: -100,
+    fetchStrategy: 'fsRead',
+    settings: {
+      inputs: [{
+        key: 'codeSelectionFormat',
+        title: () => 'Custom insert format',
+        desc: () => 'Placeholders: {path} {selection}',
+        placeholder: () => '@{path}{lines}',
+      }],
+    },
+    component: () => null,
+  })
+  return { store, service }
+}
+
+function renderSection(store: SidebarStore, service: BetterSidebarService): string {
+  return renderToString(createElement(
+    SideCardSection,
+    { store, service } as unknown as SideCardSectionProps,
+  ))
+}
+
+/** Count `aria-pressed` occurrences of one value in the rendered HTML. */
+function pressedCount(html: string, value: string): number {
+  return html.match(new RegExp(`aria-pressed="${value}"`, 'g'))?.length ?? 0
+}
+
+/** Count gear buttons (aria-label = "<title> <settingsPopup>"; the label
+ * follows the active locale, so match the English and the Chinese word). */
+function gearCount(html: string): number {
+  return html.match(/aria-label="[^"]*(Feature settings|功能设置)"/g)?.length ?? 0
+}
+
+describe('SideCardSection declarative inventory', () => {
+  it('renders one small card per registered tab: icon + title + type id + pressed state', () => {
+    const { store, service } = mount()
+    const html = renderSection(store, service)
+    expect(html).toContain('data-icon="explorer"')
+    expect(html).toContain('>Explorer<')
+    // The type id is the card's desc (the declarative "type" surface).
+    expect(html).toContain('>explorer<')
+    expect(html).toContain('data-icon="subagent"')
+    expect(html).toContain('>Subagents<')
+    // Default prefs: openByDefault + interceptOpenPath + both tabs + the
+    // image and code viewers are all enabled → 6 cards pressed, none
+    // pressed=false. The nested auto-open toggle is NOT an inline card (it
+    // lives in the popup).
+    expect(pressedCount(html, 'true')).toBe(6)
+    expect(pressedCount(html, 'false')).toBe(0)
+    expect(html).not.toContain('Auto-open Subagents')
+  })
+
+  it('renders one small card per registered viewer: icon + title + exts', () => {
+    const { store, service } = mount()
+    const html = renderSection(store, service)
+    expect(html).toContain('data-icon="image"')
+    expect(html).toContain('>Image<')
+    // The covered extensions are the card's desc.
+    expect(html).toContain('png · jpg')
+  })
+
+  it('renders the gear corner button on tabs and viewers that declare related settings', () => {
+    const { store, service } = mount()
+    const html = renderSection(store, service)
+    // Subagents (tab) and code (viewer) declare a toggle → their cards
+    // carry the settings gear (aria-label = "<title> <settingsPopup>");
+    // Explorer and Image declare none → no gear.
+    expect(gearCount(html)).toBe(2)
+  })
+
+  it('a disabled feature renders pressed=false', () => {
+    const { store, service } = mount()
+    store.setPrefs({ ...store.getPrefs(), tabsEnabled: { subagent: false }, viewersEnabled: { image: false } })
+    const html = renderSection(store, service)
+    expect(html).toContain('>Subagents<')
+    expect(html).toContain('>Image<')
+    expect(pressedCount(html, 'false')).toBe(2)
+    // openByDefault + interceptOpenPath + the explorer + the code viewer
+    // stay pressed.
+    expect(pressedCount(html, 'true')).toBe(4)
+  })
+
+  it('hides the gear of a disabled feature (its related settings are dormant)', () => {
+    // Tab side: disabling the subagent tab hides its gear, but the code
+    // viewer's own gear stays.
+    const { store, service } = mount()
+    store.setPrefs({ ...store.getPrefs(), tabsEnabled: { subagent: false } })
+    const tabHtml = renderSection(store, service)
+    expect(gearCount(tabHtml)).toBe(1)
+    // The subagent card's own title never appears inside a gear aria-label.
+    expect(tabHtml).not.toContain('aria-label="Subagents')
+
+    // Viewer side: disabling the code viewer hides its gear too.
+    store.setPrefs({ ...store.getPrefs(), viewersEnabled: { code: false } })
+    const viewerHtml = renderSection(store, service)
+    expect(gearCount(viewerHtml)).toBe(0)
+  })
+})
+
+describe('FeatureSettingsRows (the secondary settings popup body)', () => {
+  const prefs: typeof SIDEBAR_PREFS_DEFAULTS = {
+    ...SIDEBAR_PREFS_DEFAULTS,
+    autoOpenSubagent: false,
+  }
+  const toggles = [{
+    key: 'autoOpenSubagent',
+    title: () => 'Auto-open Subagents',
+    desc: () => 'Expand on new subagent',
+  }]
+
+  it('renders one native checkbox row per declared toggle with its current value', () => {
+    const html = renderToString(createElement(FeatureSettingsRows, {
+      toggles,
+      prefs,
+      onToggle: () => {},
+    }))
+    expect(html).toContain('Auto-open Subagents')
+    expect(html).toContain('Expand on new subagent')
+    // The checkbox reflects the prefs value (false here → unchecked).
+    expect(html).not.toContain('checked=""')
+  })
+
+  it('checks the row when the pref is on', () => {
+    const html = renderToString(createElement(FeatureSettingsRows, {
+      toggles,
+      prefs: { ...prefs, autoOpenSubagent: true },
+      onToggle: () => {},
+    }))
+    expect(html).toContain('checked=""')
+  })
+
+  it('renders one text-input row per declared string input with its current value and placeholder', () => {
+    const html = renderToString(createElement(FeatureSettingsRows, {
+      toggles: [],
+      inputs: [{
+        key: 'codeSelectionFormat',
+        title: () => 'Custom insert format',
+        desc: () => 'Placeholders: {path} {selection}',
+        placeholder: () => '@{path}{lines}',
+      }],
+      // The pref defaults to the @-reference format; an explicit '' shows
+      // an empty input (the build falls back to the default at insert time).
+      prefs: { ...prefs, codeSelectionFormat: '' },
+      onToggle: () => {},
+      onCommitInput: () => {},
+    }))
+    expect(html).toContain('Custom insert format')
+    expect(html).toContain('Placeholders: {path} {selection}')
+    // A native text input seeded with the pref's value.
+    expect(html).toContain('type="text"')
+    expect(html).toContain('value=""')
+    expect(html).toContain('placeholder="@{path}{lines}"')
+  })
+
+  it('seeds the input row from the default @-reference when untouched', () => {
+    const html = renderToString(createElement(FeatureSettingsRows, {
+      toggles: [],
+      inputs: [{
+        key: 'codeSelectionFormat',
+        title: () => 'Custom insert format',
+      }],
+      prefs,
+      onToggle: () => {},
+      onCommitInput: () => {},
+    }))
+    expect(html).toContain('value="@{path}{lines}"')
+  })
+
+  it('seeds the input row from the pref value', () => {
+    const html = renderToString(createElement(FeatureSettingsRows, {
+      toggles: [],
+      inputs: [{
+        key: 'codeSelectionFormat',
+        title: () => 'Custom insert format',
+      }],
+      prefs: { ...prefs, codeSelectionFormat: 'see {path}:{start}-{end}' },
+      onToggle: () => {},
+      onCommitInput: () => {},
+    }))
+    expect(html).toContain('value="see {path}:{start}-{end}"')
+  })
+})
