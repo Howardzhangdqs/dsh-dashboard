@@ -67,6 +67,7 @@
     "src",
     "scripts/install.sh",
     "scripts/install.ps1",
+    "dsh.plugin.json",
     "cordis.patch.yml",
     "README.md",
     "README_EN.md",

@@ -102,9 +102,22 @@ Quote the link: value if the path contains spaces. Restart DSH, then hard-refres
 </details>
 
 <details>
+<summary>Release-asset install (no source build)</summary>
+
+Every release ships a prebuilt `pnpm pack` tarball as a [GitHub Release](https://github.com/Howardzhangdqs/dsh-dashboard/releases) asset (contains the `lib/` output and `dsh.plugin.json`; no sourcemaps). `dsh plugin add` accepts any pnpm dependency spec, so pointing it at the asset URL works directly:
+
+```sh
+dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.4/dsh-dashboard-0.10.4.tgz
+```
+
+pnpm runs no build scripts for remote tarballs — the prebuilt artifacts install as-is, and the package's `dsh.bundle` declaration makes `dsh plugin` mount it automatically. The `node-pty` dependency still needs its build scripts allowed (`pnpm approve-builds --all`, see above). To upgrade, bump the version in the URL and re-run.
+
+</details>
+
+<details>
 <summary>npm channel (upstream published the old name; this repo is not on npm)</summary>
 
-The upstream [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) publishes `dsh-better-sidebar` to npm; this repo (renamed to dsh-dashboard) is **not published to npm** — install from source. The one-click scripts (`scripts/install.sh` / `scripts/install.ps1`, written for the npm channel) remain in the repo for reference or for use after publishing yourself.
+The upstream [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) publishes `dsh-better-sidebar` to npm; this repo (renamed to dsh-dashboard) is **not published to npm** — install from source or from a release asset. The one-click scripts (`scripts/install.sh` / `scripts/install.ps1`) remain for reference.
 
 </details>
 

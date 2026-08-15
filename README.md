@@ -102,9 +102,22 @@ pnpm install
 </details>
 
 <details>
+<summary>Release 附件直装（免源码构建）</summary>
+
+每个版本随 [GitHub Release](https://github.com/Howardzhangdqs/dsh-dashboard/releases) 附带 `pnpm pack` 产出的预构建 tarball（含 `lib/` 产物与 `dsh.plugin.json`，无 sourcemap）。`dsh plugin add` 接受任何 pnpm 依赖形式，直接指向附件 URL 即可：
+
+```sh
+dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.4/dsh-dashboard-0.10.4.tgz
+```
+
+pnpm 对远程 tarball 不执行构建脚本，装的就是附件里的预构建产物；包内 `dsh.bundle` 声明使 `dsh plugin` 自动完成挂载。`node-pty` 依赖仍需放行构建脚本（`pnpm approve-builds --all`，见上）。升级时改 URL 中的版本号重跑即可。
+
+</details>
+
+<details>
 <summary>npm 通道（上游发布过旧名包；本仓库未发布 npm）</summary>
 
-上游 [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) 以 `dsh-better-sidebar` 发布到 npm；本仓库（改名后的 dsh-dashboard）**不发布 npm**，请从源码安装。仓内仍保留一键脚本（`scripts/install.sh` / `scripts/install.ps1`，按 npm 通道编写）供参考或自行发布后使用。
+上游 [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) 以 `dsh-better-sidebar` 发布到 npm；本仓库（改名后的 dsh-dashboard）**不发布 npm**，用源码或 Release 附件安装。仓内一键脚本（`scripts/install.sh` / `scripts/install.ps1`）保留作参考。
 
 </details>
 
