@@ -54,7 +54,7 @@ DSH 的会话视图原生提供对话流与轨迹两栏，长任务中对工作�
 
 ## 安装（从源码）
 
-从源码构建安装。前置：DSH 已安装（`dsh web` 可运行），Node.js ≥ 20，pnpm ≥ 10。
+从源码构建安装。前置：DSH 已安装（`dsh web` 可运行），Node.js ≥ 22.13（DSH 基座依赖 Node 22+ API，如 `Promise.withResolvers`、`zlib.createZstdDecompress`），pnpm ≥ 10。
 
 ```sh
 # 1. 克隆并构建
@@ -62,7 +62,13 @@ git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboa
 cd ~/Code/dsh-dashboard && pnpm install && pnpm build
 
 # 2. 放行 node-pty / protobufjs 构建脚本（pnpm 11 默认拦截；pnpm 10 可跳过）
-cd ~/.dsh/profiles/web && pnpm approve-builds --all
+cd ~/.dsh/profiles/web
+cat >> pnpm-workspace.yaml <<'YAML'
+onlyBuiltDependencies:
+  - node-pty
+  - protobufjs
+YAML
+# 交互终端也可用 pnpm approve-builds 选择；上面的 YAML 形式幂等、可脚本化
 
 # 3. 依赖指向本地克隆（package.json 的 dependencies）
 #    "dsh-dashboard": "link:/home/you/Code/dsh-dashboard"
@@ -88,7 +94,7 @@ git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboa
 cd ~/Code/dsh-dashboard; pnpm install; pnpm build
 
 cd ~\.dsh\profiles\web
-pnpm approve-builds --all
+Add-Content -Path pnpm-workspace.yaml -Value "`nonlyBuiltDependencies:`n  - node-pty`n  - protobufjs"
 # package.json dependencies: "dsh-dashboard": "link:<克隆绝对路径>"
 # cordis.patch.yml 追加:
 #   - insert:
@@ -110,7 +116,7 @@ pnpm install
 dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.4/dsh-dashboard-0.10.4.tgz
 ```
 
-pnpm 对远程 tarball 不执行构建脚本，装的就是附件里的预构建产物；包内 `dsh.bundle` 声明使 `dsh plugin` 自动完成挂载。`node-pty` 依赖仍需放行构建脚本（`pnpm approve-builds --all`，见上）。升级时改 URL 中的版本号重跑即可。
+pnpm 对远程 tarball 不执行构建脚本，装的就是附件里的预构建产物；包内 `dsh.bundle` 声明使 `dsh plugin` 自动完成挂载。`node-pty` 原生模块仍需在 profile 目录放行构建（`pnpm-workspace.yaml` 加 `onlyBuiltDependencies: [node-pty, protobufjs]` 后 `pnpm rebuild node-pty`，需 make/g++/python3 工具链）。升级时改 URL 中的版本号重跑即可。
 
 </details>
 
@@ -126,11 +132,12 @@ pnpm 对远程 tarball 不执行构建脚本，装的就是附件里的预构建
 
 | 现象 | 原因与处理 |
 |---|---|
-| `Ignored build scripts` | pnpm 11 拦截构建脚本。执行 `pnpm approve-builds --all`。 |
+| `Ignored build scripts` | pnpm 11 拦截构建脚本。在 profile 的 `pnpm-workspace.yaml` 加 `onlyBuiltDependencies: [node-pty, protobufjs]` 后 `pnpm rebuild node-pty`（交互终端也可 `pnpm approve-builds` 选择）。 |
 | `minimum release age` / 版本不足 24h | pnpm 拦截发布不足 24 小时的依赖版本。在 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 下加该包名，或等待 24 小时。 |
 | 「找不到 profile 目录」 | 先运行一次 `dsh web` 初始化 `~/.dsh/profiles/web`。 |
 | 页面出现两个侧边栏 | 双挂载：`~/.dsh/profiles/web/cordis.patch.yml` 存在重复的手动挂载行（如上游旧名 `id: better-sidebar` 与 `id: dashboard` 并存），删除多余的那段。 |
 | Windows 终端不可用 | `node-pty` 依赖预编译二进制；当前 Node 版本无对应产物时需编译工具链（VS Build Tools）。主流 Node 版本一般已有预编译。 |
+| 启动报 `Promise.withResolvers is not a function` / `createZstdDecompress` 未导出 | Node 版本低于 DSH 基座要求（≥ 22.13）。升级 Node 后重启。 |
 | Windows 无 bash / curl | 使用 PowerShell 等价步骤，或安装 Git Bash / WSL。 |
 
 </details>

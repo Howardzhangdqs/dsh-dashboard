@@ -54,7 +54,7 @@ See the releases page for a demo video and screenshots.
 
 ## Installation (from source)
 
-Built and installed from source. Prerequisites: DSH installed (`dsh web` boots), Node.js ≥ 20, pnpm ≥ 10.
+Built and installed from source. Prerequisites: DSH installed (`dsh web` boots), Node.js ≥ 22.13 (the DSH base requires Node 22+ APIs such as `Promise.withResolvers` and `zlib.createZstdDecompress`), pnpm ≥ 10.
 
 ```sh
 # 1. Clone and build
@@ -62,7 +62,13 @@ git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboa
 cd ~/Code/dsh-dashboard && pnpm install && pnpm build
 
 # 2. Allow node-pty / protobufjs build scripts (pnpm 11 blocks them by default; skip on pnpm 10)
-cd ~/.dsh/profiles/web && pnpm approve-builds --all
+cd ~/.dsh/profiles/web
+cat >> pnpm-workspace.yaml <<'YAML'
+onlyBuiltDependencies:
+  - node-pty
+  - protobufjs
+YAML
+# an interactive terminal may also use pnpm approve-builds; the YAML form is idempotent and scriptable
 
 # 3. Point the dependency at the local clone (package.json dependencies)
 #    "dsh-dashboard": "link:/home/you/Code/dsh-dashboard"
@@ -88,7 +94,7 @@ git clone https://github.com/Howardzhangdqs/dsh-dashboard.git ~/Code/dsh-dashboa
 cd ~/Code/dsh-dashboard; pnpm install; pnpm build
 
 cd ~\.dsh\profiles\web
-pnpm approve-builds --all
+Add-Content -Path pnpm-workspace.yaml -Value "`nonlyBuiltDependencies:`n  - node-pty`n  - protobufjs"
 # package.json dependencies: "dsh-dashboard": "link:<absolute path of the clone>"
 # cordis.patch.yml append:
 #   - insert:
@@ -110,7 +116,7 @@ Every release ships a prebuilt `pnpm pack` tarball as a [GitHub Release](https:/
 dsh plugin --profile web add https://github.com/Howardzhangdqs/dsh-dashboard/releases/download/v0.10.4/dsh-dashboard-0.10.4.tgz
 ```
 
-pnpm runs no build scripts for remote tarballs — the prebuilt artifacts install as-is, and the package's `dsh.bundle` declaration makes `dsh plugin` mount it automatically. The `node-pty` dependency still needs its build scripts allowed (`pnpm approve-builds --all`, see above). To upgrade, bump the version in the URL and re-run.
+pnpm runs no build scripts for remote tarballs — the prebuilt artifacts install as-is, and the package's `dsh.bundle` declaration makes `dsh plugin` mount it automatically. The `node-pty` native module still needs its build allowed in the profile directory (add `onlyBuiltDependencies: [node-pty, protobufjs]` to `pnpm-workspace.yaml`, then `pnpm rebuild node-pty`; requires make/g++/python3). To upgrade, bump the version in the URL and re-run.
 
 </details>
 
@@ -126,11 +132,12 @@ The upstream [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-bet
 
 | Symptom | Cause and fix |
 |---|---|
-| `Ignored build scripts` | pnpm 11 blocked build scripts. Run `pnpm approve-builds --all`. |
+| `Ignored build scripts` | pnpm 11 blocked build scripts. Add `onlyBuiltDependencies: [node-pty, protobufjs]` to the profile's `pnpm-workspace.yaml`, then `pnpm rebuild node-pty` (an interactive terminal may also use `pnpm approve-builds`). |
 | `minimum release age` / version < 24h | pnpm blocks dependency versions younger than 24 hours. Add the package under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`, or wait. |
 | "profile directory not found" | Run `dsh web` once to initialize `~/.dsh/profiles/web`. |
 | Two sidebars on the page | Double mount: duplicate hand-written insert lines in `~/.dsh/profiles/web/cordis.patch.yml` (e.g. the upstream legacy `id: better-sidebar` alongside `id: dashboard`) — delete the redundant one. |
 | Terminal fails on Windows | `node-pty` relies on prebuilt binaries; install a build toolchain (VS Build Tools) if none matches your Node version. Mainstream versions are covered. |
+| Boot fails with `Promise.withResolvers is not a function` / `createZstdDecompress` not exported | Node is below the DSH base requirement (≥ 22.13). Upgrade Node and restart. |
 | No bash / curl on Windows | Use the PowerShell equivalent steps, or install Git Bash / WSL. |
 
 </details>
