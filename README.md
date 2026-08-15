@@ -196,7 +196,6 @@ pnpm watch        # tsdown --watch
 - Git 不支持 push/pull/fetch；无文件监听（手动刷新）；工具行内文件打开按钮不可拦截。
 - 终端标签拖至另一分栏会重挂载（shell 重启）。
 - `.xlsx` 预览不保留单元格样式（SheetJS 社区版限制）；Office/PPTX 预览内联进 client bundle（约 23MB），首次加载较慢。
-- 浏览器沙箱无登录态、第三方 Cookie 受限，部分站点登录需走弹窗；被 `X-Frame-Options` / `frame-ancestors` 拒绝嵌入的站点（如 arxiv.org）显示原因面板（附「在浏览器中打开」）；iframe 内部跳转不进入后退栈。
 - HTML 预览渲染已保存文件（不反映未保存草稿）。
 - 移动端（<768px）无底部面板：进入窄屏时其标签页一次性并入右侧栏；桌面端底部面板仅在宽视口可用。
 

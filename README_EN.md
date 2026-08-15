@@ -196,7 +196,6 @@ pnpm watch        # tsdown --watch
 - Git has no push/pull/fetch; no file watcher (manual refresh); tool-inline file-open buttons cannot be intercepted.
 - Dragging a terminal tab to another pane remounts it (the shell restarts).
 - `.xlsx` preview does not preserve cell styles (SheetJS community edition); Office/PPTX preview inlines into the client bundle (~23MB), slower on first load.
-- The browser sandbox has no login state and third-party cookies are restricted; some sites need popup login; sites refusing embedding via `X-Frame-Options` / `frame-ancestors` (e.g. arxiv.org) show a reason panel (with "Open in browser"); in-iframe navigation does not enter the back stack.
 - HTML preview renders the saved file (not unsaved drafts).
 - No bottom panel on mobile (<768px): entering a narrow viewport merges its tabs into the sidebar once; the desktop bottom panel is wide-viewport only.
 
